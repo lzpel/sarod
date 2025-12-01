@@ -1,8 +1,3 @@
-# 吟遊詩人サロード
+# Sarod
 
-画面から喋る系aiエージェント
-
-特徴
-
-- ローカルで動き応答が早い
-	- rustの特性を生かし切る
+https://kp3qwanbdo2djj6dvuacndxzjq0qwdym.lambda-url.ap-northeast-1.on.aws/api/ui
