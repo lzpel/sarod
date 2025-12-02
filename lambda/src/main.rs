@@ -3,7 +3,7 @@ mod out;
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {
-	let server = api::Api {};
+	let server = api::Api::new().await.expect("cannot connect database");
 	let port: u16 = std::env::var("PORT")
 		.unwrap_or("8080".to_string())
 		.parse()

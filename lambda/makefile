@@ -2,7 +2,7 @@ generate:
 	cargo run --example generate
 	cargo fmt
 run:
-	PORT=8090 cargo run
+	PORT=8000 cargo run
 test:
 	cargo build --release --features frontend
 	target/release/lambda

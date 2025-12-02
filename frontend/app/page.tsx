@@ -4,6 +4,37 @@ export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+		<form className="max-w-md mx-auto space-y-6">
+			<div>
+				<label className="block text-sm font-medium mb-1">名前</label>
+				<input
+				type="text"
+				className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+				/>
+			</div>
+
+			<div>
+				<label className="block text-sm font-medium mb-1">メールアドレス</label>
+				<input
+				type="email"
+				className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+				/>
+			</div>
+
+			<div>
+				<label className="block text-sm font-medium mb-1">メッセージ</label>
+				<textarea
+				className="w-full border border-gray-300 rounded-lg p-2 h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+				></textarea>
+			</div>
+
+			<button
+				type="submit"
+				className="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700"
+			>
+				送信
+			</button>
+		</form>
         <Image
           className="dark:invert"
           src="/next.svg"

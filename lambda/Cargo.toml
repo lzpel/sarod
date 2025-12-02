@@ -14,5 +14,6 @@ axum = { version = "*", features = ["multipart"]}
 tokio = { version = "*", features = ["rt", "rt-multi-thread", "macros", "signal"] }
 rust-embed = { version = "^8", optional=true }
 mime_guess = "*"
-firestore = "*"
+firestore = { version="*" }
+rustls = { version = "*", default-features = false, features = ["ring"] }
 uuid = { version = "*", features = ["serde", "v7"] }
