@@ -5,41 +5,43 @@ using Http;
 @server("/api", "開発用")
 namespace DemoService;
 
-model Widget {
-  id: string;
-  weight: int32;
-  color: "red" | "blue";
+model Response<code extends numeric> {
+	@statusCode statusCode: code;
 }
-
-model WidgetList {
-  items: Widget[];
-}
-
 @error
-model Error {
-  code: int32;
-  message: string;
+model ErrorResponse<code extends numeric> extends Response<code> {
+	@header contentType: "text/plain";
+	@body value: string;
+}
+model NoContentResponse is Response<204>;
+model NotFoundResponse is ErrorResponse<404>;
+model BadRequestResponse is ErrorResponse<400>;
+@format("uuid")
+scalar UUID extends string;
+
+model User {
+	uuid: UUID;//一意
+	name: string;//名前
+	icon: string;//名前
+	hashed_password: string;//ハッシュ化されたパスワード
 }
 
-model AnalyzeResult {
-  id: string;
-  analysis: string;
+model Rule {
+	uuid: UUID;//一意
+	uuid_root: UUID;//親
+	name: string;//名前
+	script: string;//名前
 }
 
-@route("/widgets")
-@tag("Widgets")
-interface Widgets {
-  /** List widgets */
-  @get list(): WidgetList | Error;
-  /** Read widgets */
-  @get read(@path id: string): Widget | Error;
-  /** Create a widget */
-  @post create(@body body: Widget): Widget | Error;
-  /** Update a widget */
-  @patch update(@path id: string, @body body: MergePatchUpdate<Widget>): Widget | Error;
-  /** Delete a widget */
-  @delete delete(@path id: string): void | Error;
+model Page {
+	uuid: UUID;//一意
+	uuid_node: UUID;//ルール
+	uuid_root: UUID;//親
+	content: string;//名前
+}
 
-  /** Analyze a widget */
-  @route("{id}/analyze") @post analyze(@path id: string): AnalyzeResult | Error;
+@route("/user")
+interface Main {
+	/** List widgets */
+	@get list(): User[] | NotFoundResponse;
 }

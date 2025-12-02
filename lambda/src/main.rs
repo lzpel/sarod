@@ -1,6 +1,5 @@
 mod api;
 mod out;
-use mime_guess::from_path;
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {
