@@ -1,3 +1,2 @@
 #EOF_DOCKERIGNORE
-out/
-out.*
+target/

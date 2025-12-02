@@ -43,7 +43,7 @@ async fn frontend(uri: axum::http::Uri) -> axum::response::Response<axum::body::
 		path.set_extension("html");
 	}
 	// MIME type 推論
-	let mime = from_path(&path)
+	let mime = mime_guess::from_path(&path)
 		.first()
 		.map(|m| m.essence_str().to_string())
 		.unwrap_or_else(|| "application/octet-stream".into());

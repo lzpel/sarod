@@ -5,10 +5,10 @@ OUT_FIRESTORE_RAGE := ./sarod_firestore.json.age
 define MAKE_RECURSIVE
 if [ -n "$${MAKE_RECURSIVE_PARALLEL}" ]; then
 	trap 'kill 0' EXIT INT TERM
-	time printf '%s\n' $(MAKE_RECURSIVE_DIRS) | xargs -P0 -IX sh -c '$(MAKE) -C X $@'
+	time printf '%s\n' $(MAKE_RECURSIVE_DIRS) | xargs -P0 -IX sh -c '$(MAKE) -C X $@ || exit 255'
 	wait
 else
-	time printf '%s\n' $(MAKE_RECURSIVE_DIRS) | xargs -IX sh -c '$(MAKE) -C X $@'
+	time printf '%s\n' $(MAKE_RECURSIVE_DIRS) | xargs -IX sh -c '$(MAKE) -C X $@ || exit 255'
 fi
 endef
 export

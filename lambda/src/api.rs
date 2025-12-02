@@ -8,9 +8,13 @@ pub struct Api {
 impl Api {
 	pub async fn new() -> Result<Self, String> {
 		Ok(Self {
-			db: firestore::FirestoreDb::with_options_service_account_key_file(firestore::FirestoreDbOptions::new("lzpel-net".into()).with_database_id("sarod".into()), "out.json".into())
-				.await
-				.map_err(|v| v.to_string())?,
+			db: firestore::FirestoreDb::with_options_service_account_key_file(
+				firestore::FirestoreDbOptions::new("lzpel-net".into())
+					.with_database_id("sarod".into()),
+				"out.json".into(),
+			)
+			.await
+			.map_err(|v| v.to_string())?,
 		})
 	}
 }
