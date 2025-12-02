@@ -1,3 +1,5 @@
+generate:
+	npm install
 bootstrap:
 	BUILDX_NO_DEFAULT_ATTESTATIONS=1 npm run -- cdk bootstrap
 deploy:

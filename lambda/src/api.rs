@@ -1,4 +1,6 @@
 use crate::auth;
+use crate::collection::Collection;
+use crate::auth::TokenJwtGenerator;
 use crate::out;
 use firestore;
 use uuid::Uuid;
@@ -39,9 +41,28 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::AuthapiCallbackOauthRequest,
 	) -> out::AuthapiCallbackOauthResponse {
-		match self.google.callback(&req.state, &req.code).await {
-			Ok(v) => out::AuthapiCallbackOauthResponse::Status200(format!("{v:?}")),
+		let inner=async ||->Result<String, String>{
+			let a=self.google.callback(&req.state, &req.code).await?;
+			let b= a.jwt()?;
+			let c=out::User::query(&self.db, "auth_google", &b.sub).await?;
+			let w=if let Some(d) = c.first(){
+				d.clone()
+			}else{
+				let r = out::User {
+					id: Uuid::now_v7(),
+					name: b.name,
+					auth_email: b.email,
+					auth_google: b.sub,
+					is_active: true,
+					..Default::default()
+				};
+				r.push(&self.db).await.map(|_| r)?
+			};
+			Ok(w.signed_jwt().map_err(|v| v.to_string())?)
+		};
+		match inner().await{
 			Err(e) => out::AuthapiCallbackOauthResponse::Status400(e),
+			Ok(v) => out::AuthapiCallbackOauthResponse::Status200(v)
 		}
 	}
 	async fn userlistapi_user_push(
@@ -54,11 +75,10 @@ impl out::ApiInterface for Api {
 			let r = out::User {
 				id: Uuid::now_v7(),
 				name: req.body.name,
-				icon: Default::default(),
 				auth_email: req.body.auth_email.unwrap_or_default(),
 				auth_google: req.body.auth_google.unwrap_or_default(),
 				auth_email_password: req.body.auth_email_password.unwrap_or_default(),
-				is_active: false,
+				..Default::default()
 			};
 			match r.push(&self.db).await {
 				Ok(_) => return out::UserlistapiUserPushResponse::Status200(r),
@@ -71,26 +91,22 @@ impl out::ApiInterface for Api {
 	}
 }
 
-trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync + Send {
-	fn collection_name() -> &'static str;
-	fn document_id(&self) -> String;
-	async fn push(&self, db: &firestore::FirestoreDb) -> Result<(), String> {
-		db.fluent()
-			.insert()
-			.into(Self::collection_name())
-			.document_id(&self.document_id())
-			.object(self)
-			.execute()
-			.await
-			.map_err(|v| v.to_string())
-	}
-}
-
 impl Collection for out::User {
 	fn collection_name() -> &'static str {
 		"user"
 	}
 	fn document_id(&self) -> String {
 		self.id.to_string()
+	}
+}
+
+impl TokenJwtGenerator for out::User{
+	fn jwt(&self)->auth::TokenJwt {
+		auth::TokenJwt {
+			sub: self.id.to_string(), 
+			email: self.auth_email.clone(), 
+			name: self.name.clone(),
+			..Default::default()
+		}
 	}
 }

@@ -1,6 +1,7 @@
 mod api;
 mod auth;
 mod out;
+mod collection;
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {

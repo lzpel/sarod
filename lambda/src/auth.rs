@@ -1,6 +1,6 @@
 use reqwest;
-use serde::Deserialize;
-use std::hash::{Hash, Hasher};
+use serde::{Deserialize, Serialize};
+use std::hash::{Hasher};
 
 #[derive(Debug, Deserialize)]
 pub struct GoogleOAuthSecret {
@@ -23,29 +23,16 @@ pub struct OAuth {
 	pub auth_uri: String,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct TokenResponse {
-	access_token: String,
-	expires_in: u64,
-	refresh_token: Option<String>,
-	scope: String,
-	token_type: String,
-	id_token: Option<String>, // OIDC の場合これがメイン
-}
-
 impl OAuth {
 	const SEPRATOR: &str = ">>>";
 	pub fn redirect_uri(&self, redirect_uri: &str) -> String {
-		let start_time = std::time::SystemTime::now();
-		let mut hasher = std::hash::DefaultHasher::new();
-		start_time.hash(&mut hasher);
-		let state = hasher.finish();
+		let start_time = timestamp();
 		format!(
 			"{auth_uri}?client_id={client_id}&redirect_uri={redir}&response_type=code&scope=openid%20email%20profile&state={state}",
 			auth_uri = self.auth_uri,
 			client_id = self.client_id,
 			redir = url_encode(&redirect_uri),
-			state = url_encode(&format!("{redirect_uri}{}{state}", Self::SEPRATOR)),
+			state = url_encode(&format!("{redirect_uri}{}{start_time}", Self::SEPRATOR)),
 		)
 	}
 	pub async fn callback(&self, state: &str, code: &str) -> Result<TokenResponse, String> {
@@ -86,6 +73,92 @@ impl OAuth {
 			return Err(format!("token endpoint returned error {status}: {text}"));
 		}
 	}
+}
+
+
+
+#[derive(Deserialize, Debug)]
+pub struct TokenResponse {
+	access_token: String,
+	expires_in: u64,
+	refresh_token: Option<String>,
+	scope: String,
+	token_type: String,
+	id_token: Option<String>, // OIDC の場合これがメイン
+}
+
+impl TokenResponse{
+	//jsonwebtoken::でsubを取り出して
+	pub fn jwt(&self)->Result<TokenJwt,String>{
+		// 1. id_token が存在するか確認
+        let token_str = self.id_token.as_ref().ok_or("no id_token")?;
+
+        // 2. 検証設定を作成 (署名検証を無効化)
+        let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+        validation.insecure_disable_signature_validation();
+        validation.validate_exp = false; // 有効期限切れでもIDだけ取りたい場合はfalse、厳密にするならtrue
+        validation.validate_aud = false; // Audienceチェックもスキップ
+
+        // 3. デコード実行
+        // 署名検証しないので Key はダミーでOK
+        let dummy_key = jsonwebtoken::DecodingKey::from_secret(&[]); 
+        
+        let token_data = jsonwebtoken::decode::<TokenJwt>(
+            token_str,
+            &dummy_key,
+            &validation
+        ).map_err(|e| e.to_string())?; // デコード失敗時は None を返す
+
+        // 4. sub を返す
+        Ok(token_data.claims)
+	}
+}
+
+// Jwtの情報を詰めた構造体// JWTのペイロードとして使用する構造体
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct TokenJwt {// 必須となる標準クレーム
+    pub exp: Option<usize>,   // Expiration time (有効期限)
+    pub iat: Option<usize>,   // Issued At (発行時刻)
+	pub sub: String,
+	pub email: String,
+	pub name: String
+}
+// フロントエンドで使える検証可能なJwt文字列を出力するtrait
+pub trait TokenJwtGenerator{
+	const JWT_SECRET: &[u8] = b"YOUR_SECURE_AND_LONG_SECRET_KEY";
+	fn jwt(&self)->TokenJwt;
+	// 署名付きJWT文字列を出力
+    fn signed_jwt(&self) -> Result<String, jsonwebtoken::errors::Error> {
+        // 1. クレームの取得
+        let mut claims = self.jwt();
+		claims.iat=Some(timestamp());
+		claims.exp=Some(timestamp()+60*60);
+        // 2. エンコード
+        let header = jsonwebtoken::Header::default();
+        let encoding_key = jsonwebtoken::EncodingKey::from_secret(Self::JWT_SECRET);
+        jsonwebtoken::encode(&header, &claims, &encoding_key)
+    }
+	// 検証
+	fn validate_jwt(signed_jwt: &str) -> Result<TokenJwt, jsonwebtoken::errors::Error>{
+		let decoding_key = jsonwebtoken::DecodingKey::from_secret(Self::JWT_SECRET);
+        // Validation::default() は exp, iat, sub の存在などを標準的に検証します
+        let token_data = jsonwebtoken::decode::<TokenJwt>(
+            signed_jwt,
+            &decoding_key,
+            &jsonwebtoken::Validation::default()
+        )?;
+        // 検証が成功した場合、デコードされたクレームを返す
+        Ok(token_data.claims)
+	}
+}
+
+pub fn timestamp()->usize{
+    let now = std::time::SystemTime::now();
+    let duration_since_epoch = now
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+		.expect("SystemTime is before UNIX_EPOCH");
+    // Durationをミリ秒数 (u128) に変換
+    duration_since_epoch.as_secs() as usize
 }
 
 pub fn url_encode(input: &str) -> String {
@@ -147,4 +220,84 @@ fn from_hex_digit(b: u8) -> Option<u8> {
 		b'a'..=b'f' => Some(b - b'a' + 10),
 		_ => None,
 	}
+}
+
+
+//test
+#[cfg(test)]
+mod tests {
+    use super::*;
+	// トレイトを実装するためのダミー構造体
+	#[derive(Debug)]
+	pub struct TestUserRecord {
+		pub id: String,
+		pub user_email: String,
+		pub full_name: String,
+	}
+
+	impl TokenJwtGenerator for TestUserRecord {
+		const JWT_SECRET: &'static [u8] = b"TEST_SECRET_KEY_FOR_JWT";
+		
+		fn jwt(&self) -> TokenJwt {
+			TokenJwt {
+				exp: None, // signed_jwt() で設定するため None
+				iat: None, // signed_jwt() で設定するため None
+				sub: self.id.clone(),
+				email: self.user_email.clone(),
+				name: self.full_name.clone(),
+			}
+		}
+	}
+    #[test]
+    fn test_jwt_sign_and_validate_success() {
+        // 1. データ準備
+        let user_data = TestUserRecord {
+            id: "u_456abc".to_string(),
+            user_email: "test@example.com".to_string(),
+            full_name: "Test User".to_string(),
+        };
+
+        // 2. 署名 (エンコード)
+        let signed_token = user_data.signed_jwt().expect("JWT署名に失敗しました");
+        
+        // 3. 検証 (デコード)
+        let claims = TestUserRecord::validate_jwt(&signed_token) .expect("JWT検証に失敗しました");
+
+        // 4. 結果の検証
+        // sub, email, name が元のデータと一致するか
+        assert_eq!(claims.sub, user_data.id);
+        assert_eq!(claims.email, user_data.user_email);
+        assert_eq!(claims.name, user_data.full_name);
+        
+        // iat と exp が設定され、有効であるか
+        assert!(claims.iat.is_some());
+        assert!(claims.exp.is_some());
+        println!("Test successful: Token valid for sub: {}", claims.sub);
+    }
+    
+    #[test]
+    fn test_jwt_validation_failure_bad_secret() {
+        // 1. データ準備と署名 (正しい秘密鍵を使用)
+        let user_data = TestUserRecord {
+            id: "u_fail".to_string(),
+            user_email: "fail@example.com".to_string(),
+            full_name: "Fail User".to_string(),
+        };
+        let signed_token = user_data.signed_jwt().unwrap();
+
+        // 2. 異なる秘密鍵を使ってデコードを試みる
+        // TokenJwtGenerator を直接使わず、外部から偽の検証を実行するケースを想定
+        let wrong_key = jsonwebtoken::DecodingKey::from_secret(b"WRONG_SECRET_KEY_FOR_JWT");
+        
+        let result = jsonwebtoken::decode::<TokenJwt>(
+            &signed_token,
+            &wrong_key,
+            &jsonwebtoken::Validation::default()
+        );
+
+        // 3. 結果の検証: 署名検証エラー (InvalidSignature) が返ることを確認
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().kind(), &jsonwebtoken::errors::ErrorKind::InvalidSignature);
+        println!("Test successful: Validation failed with wrong key.");
+    }
 }
