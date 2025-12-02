@@ -17,3 +17,4 @@ mime_guess = "*"
 firestore = { version="*" }
 rustls = { version = "*", default-features = false, features = ["ring"] }
 uuid = { version = "*", features = ["serde", "v7"] }
+reqwest = "0.12.24"

@@ -61,6 +61,18 @@ model Subscription {
 	status: "active" | "trialing" | "canceled" | "past_due";
 }
 
+@route("/auth")
+interface AuthApi {
+	@doc("""
+		google ログイン
+	""")
+	@route("/google") @get google(@query redirect: string): string;
+	@doc("""
+		oauth コールバック用
+	""")
+	@route("/callback_oauth") @get callback_oauth(@query code: string, @query state: string): string|BadRequestResponse
+}
+
 @route("/user")
 interface UserListApi {
 	@doc("""

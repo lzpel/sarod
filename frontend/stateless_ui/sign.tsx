@@ -1,6 +1,4 @@
-import { userListApiUserPush } from "@/src/out"
-
-export default function Sign(){
+export default function Sign(props: {auth_uri: string, redirect_uri: string}){
 	return <main className="flex-1 flex items-center justify-center px-4 pb-16">
 		<div className="w-full max-w-4xl grid gap-10 md:grid-cols-[minmax(0,1.2fr),minmax(0,1fr)] items-center">
 			<section>
@@ -44,10 +42,11 @@ export default function Sign(){
 					</p>
 
 					<form
-						action="/auth/google"
-						method="post"
+						action={props.auth_uri}
+						method="get"
 						className="mb-5"
 					>
+						<input hidden name="redirect" value={props.redirect_uri}/>
 						<button
 							type="submit"
 							className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-100 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-950"

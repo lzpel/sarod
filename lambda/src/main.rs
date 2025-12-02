@@ -1,4 +1,5 @@
 mod api;
+mod auth;
 mod out;
 #[allow(dead_code)]
 #[tokio::main]
