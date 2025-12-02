@@ -13,3 +13,4 @@ serde_json= "*"
 axum = { version = "*", features = ["multipart"]}
 tokio = { version = "*", features = ["rt", "rt-multi-thread", "macros", "signal"] }
 rust-embed = { version = "^8", optional=true }
+mime_guess = "*"

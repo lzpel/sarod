@@ -1,7 +1,5 @@
 use crate::out;
 
-pub struct Api{
-}
+pub struct Api {}
 
-impl out::ApiInterface for Api {
-}
+impl out::ApiInterface for Api {}

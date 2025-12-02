@@ -1,5 +1,6 @@
 generate:
 	cargo run --example generate
+	cargo fmt
 run:
 	cargo run
 test:
