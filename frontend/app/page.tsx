@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Sign from "@/app/sign";
+import Sign from "@/stateless_ui/sign";
 
 export default function Home() {
 	return (

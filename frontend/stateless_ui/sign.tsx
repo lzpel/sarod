@@ -148,8 +148,3 @@ export default function Sign(){
 		</div>
 	</main>
 }
-
-function CreateAccountFromEmail(){
-	const email="get from id"
-	const password="get from id"
-}
