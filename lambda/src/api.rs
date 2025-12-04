@@ -1,6 +1,6 @@
 use crate::auth;
-use crate::collection::Collection;
 use crate::auth::TokenJwtGenerator;
+use crate::collection::Collection;
 use crate::out;
 use firestore;
 use uuid::Uuid;
@@ -41,13 +41,13 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::AuthapiCallbackOauthRequest,
 	) -> out::AuthapiCallbackOauthResponse {
-		let inner=async ||->Result<String, String>{
-			let a=self.google.callback(&req.state, &req.code).await?;
-			let b= a.jwt()?;
-			let c=out::User::query(&self.db, "auth_google", &b.sub).await?;
-			let w=if let Some(d) = c.first(){
+		let inner = async || -> Result<String, String> {
+			let a = self.google.callback(&req.state, &req.code).await?;
+			let b = a.jwt()?;
+			let c = out::User::query(&self.db, "auth_google", &b.sub).await?;
+			let w = if let Some(d) = c.first() {
 				d.clone()
-			}else{
+			} else {
 				let r = out::User {
 					id: Uuid::now_v7(),
 					name: b.name,
@@ -60,9 +60,9 @@ impl out::ApiInterface for Api {
 			};
 			Ok(w.signed_jwt().map_err(|v| v.to_string())?)
 		};
-		match inner().await{
+		match inner().await {
 			Err(e) => out::AuthapiCallbackOauthResponse::Status400(e),
-			Ok(v) => out::AuthapiCallbackOauthResponse::Status200(v)
+			Ok(v) => out::AuthapiCallbackOauthResponse::Status200(v),
 		}
 	}
 	async fn userlistapi_user_push(
@@ -100,11 +100,11 @@ impl Collection for out::User {
 	}
 }
 
-impl TokenJwtGenerator for out::User{
-	fn jwt(&self)->auth::TokenJwt {
+impl TokenJwtGenerator for out::User {
+	fn jwt(&self) -> auth::TokenJwt {
 		auth::TokenJwt {
-			sub: self.id.to_string(), 
-			email: self.auth_email.clone(), 
+			sub: self.id.to_string(),
+			email: self.auth_email.clone(),
 			name: self.name.clone(),
 			..Default::default()
 		}

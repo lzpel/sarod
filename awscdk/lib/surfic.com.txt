@@ -1,0 +1,41 @@
+;;
+;; Domain:     surfic.com.
+;; Exported:   2025-12-04 20:45:11
+;;
+;; This file is intended for use for informational and archival
+;; purposes ONLY and MUST be edited before use on a production
+;; DNS server.  In particular, you must:
+;;   -- update the SOA record with the correct authoritative name server
+;;   -- update the SOA record with the contact e-mail address information
+;;   -- update the NS record(s) with the authoritative name servers for this domain.
+;;
+;; For further information, please consult the BIND documentation
+;; located on the following website:
+;;
+;; http://www.isc.org/
+;;
+;; And RFC 1035:
+;;
+;; http://www.ietf.org/rfc/rfc1035.txt
+;;
+;; Please note that we do NOT offer technical support for any use
+;; of this zone data, the BIND name server, or any other third-party
+;; DNS software.
+;;
+;; Use at your own risk.
+;; SOA Record
+surfic.com	3600	IN	SOA	bayan.ns.cloudflare.com. dns.cloudflare.com. 2051654771 10000 2400 604800 3600
+
+;; NS Records
+surfic.com.	86400	IN	NS	bayan.ns.cloudflare.com.
+surfic.com.	86400	IN	NS	imani.ns.cloudflare.com.
+
+;; AAAA Records
+surfic.com.	1	IN	AAAA	2606:50c0:8003::153 ; cf_tags=cf-proxied:true
+surfic.com.	1	IN	AAAA	2606:50c0:8002::153 ; cf_tags=cf-proxied:true
+surfic.com.	1	IN	AAAA	2606:50c0:8001::153 ; cf_tags=cf-proxied:true
+surfic.com.	1	IN	AAAA	2606:50c0:8000::153 ; cf_tags=cf-proxied:true
+
+;; CNAME Records
+_67fd738594274e2ffde4ee75dd54ee6a.surfic.com.	1	IN	CNAME	_444c1a87f2314ee5d86be2ebd6ecb03c.jkddzztszm.acm-validations.aws. ; cf_tags=cf-proxied:false
+sarod.surfic.com.	1	IN	CNAME	d3f21o93cknxnx.cloudfront.net. ; cf_tags=cf-proxied:true

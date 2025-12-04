@@ -11,9 +11,14 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			.await
 			.map_err(|v| v.to_string())
 	}
-	async fn query(db: &firestore::FirestoreDb, name: &str, value: &str) -> Result<Vec<Self>, String> {
+	async fn query(
+		db: &firestore::FirestoreDb,
+		name: &str,
+		value: &str,
+	) -> Result<Vec<Self>, String> {
 		// "users" コレクションから "email" フィールドが target_email と一致するものを検索
-		let users: Vec<Self> = db.fluent()
+		let users: Vec<Self> = db
+			.fluent()
 			.select()
 			.from(Self::collection_name())
 			.filter(|q| {
