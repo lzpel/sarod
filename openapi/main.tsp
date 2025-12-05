@@ -22,7 +22,7 @@ scalar UUID extends string;
 model User {
 	id: UUID;//一意
 	name: string;//名前
-	icon: string;//アイコン
+	picture: string;//アイコン
 	auth_email: string;
 	auth_google: string;
 	auth_email_password: string;

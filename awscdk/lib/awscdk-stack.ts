@@ -17,6 +17,9 @@ export class AwscdkStack extends cdk.Stack {
 			}
 		)
 		
+		const bucket = new cdk.aws_s3.Bucket(this, 'uuid');
+		bucket.grantReadWrite(api.lambda)//s3読み書き権限設定
+		
 		//キャッシュを提供するコンテンツ配信ネットワーク(CDN)(Cloud Front)を用意
 		const distribution = new cdk.aws_cloudfront.Distribution(this, "cloudfront", {
 			defaultBehavior: {

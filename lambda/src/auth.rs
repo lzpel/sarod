@@ -110,7 +110,7 @@ impl TokenResponse {
 }
 
 // Jwtの情報を詰めた構造体// JWTのペイロードとして使用する構造体
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 pub struct TokenJwt {
 	// 必須となる標準クレーム
 	pub exp: Option<usize>, // Expiration time (有効期限)
@@ -118,25 +118,36 @@ pub struct TokenJwt {
 	pub sub: String,
 	pub email: String,
 	pub name: String,
+	pub picture: Option<String>,
+}
+impl TokenJwt {
+	pub fn age(&self) -> Option<usize> {
+		match (self.exp, self.iat) {
+			(Some(a), Some(b)) => Some(a - b),
+			_ => None,
+		}
+	}
 }
 // フロントエンドで使える検証可能なJwt文字列を出力するtrait
 pub trait TokenJwtGenerator {
-	const JWT_SECRET: &[u8] = b"YOUR_SECURE_AND_LONG_SECRET_KEY";
 	fn jwt(&self) -> TokenJwt;
-	// 署名付きJWT文字列を出力
-	fn signed_jwt(&self) -> Result<String, jsonwebtoken::errors::Error> {
+	fn secret() -> &'static [u8];
+	//署名
+	fn signed_jwt(&self) -> String {
 		// 1. クレームの取得
-		let mut claims = self.jwt();
-		claims.iat = Some(timestamp());
-		claims.exp = Some(timestamp() + 60 * 60);
+		let claims = TokenJwt {
+			iat: Some(timestamp()),
+			exp: Some(timestamp() + 60 * 60),
+			..self.jwt()
+		};
 		// 2. エンコード
 		let header = jsonwebtoken::Header::default();
-		let encoding_key = jsonwebtoken::EncodingKey::from_secret(Self::JWT_SECRET);
-		jsonwebtoken::encode(&header, &claims, &encoding_key)
+		let encoding_key = jsonwebtoken::EncodingKey::from_secret(&Self::secret());
+		jsonwebtoken::encode(&header, &claims, &encoding_key).unwrap()
 	}
 	// 検証
 	fn validate_jwt(signed_jwt: &str) -> Result<TokenJwt, jsonwebtoken::errors::Error> {
-		let decoding_key = jsonwebtoken::DecodingKey::from_secret(Self::JWT_SECRET);
+		let decoding_key = jsonwebtoken::DecodingKey::from_secret(&Self::secret());
 		// Validation::default() は exp, iat, sub の存在などを標準的に検証します
 		let token_data = jsonwebtoken::decode::<TokenJwt>(
 			signed_jwt,
@@ -231,7 +242,9 @@ mod tests {
 	}
 
 	impl TokenJwtGenerator for TestUserRecord {
-		const JWT_SECRET: &'static [u8] = b"TEST_SECRET_KEY_FOR_JWT";
+		fn secret() -> &'static [u8] {
+			b"TEST_SECRET_KEY_FOR_JWT"
+		}
 
 		fn jwt(&self) -> TokenJwt {
 			TokenJwt {
@@ -240,6 +253,7 @@ mod tests {
 				sub: self.id.clone(),
 				email: self.user_email.clone(),
 				name: self.full_name.clone(),
+				picture: None,
 			}
 		}
 	}
@@ -253,7 +267,7 @@ mod tests {
 		};
 
 		// 2. 署名 (エンコード)
-		let signed_token = user_data.signed_jwt().expect("JWT署名に失敗しました");
+		let signed_token = user_data.signed_jwt();
 
 		// 3. 検証 (デコード)
 		let claims = TestUserRecord::validate_jwt(&signed_token).expect("JWT検証に失敗しました");
@@ -278,7 +292,7 @@ mod tests {
 			user_email: "fail@example.com".to_string(),
 			full_name: "Fail User".to_string(),
 		};
-		let signed_token = user_data.signed_jwt().unwrap();
+		let signed_token = user_data.signed_jwt();
 
 		// 2. 異なる秘密鍵を使ってデコードを試みる
 		// TokenJwtGenerator を直接使わず、外部から偽の検証を実行するケースを想定

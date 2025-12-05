@@ -41,7 +41,7 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::AuthapiCallbackOauthRequest,
 	) -> out::AuthapiCallbackOauthResponse {
-		let inner = async || -> Result<String, String> {
+		let inner = async || -> Result<_, String> {
 			let a = self.google.callback(&req.state, &req.code).await?;
 			let b = a.jwt()?;
 			let c = out::User::query(&self.db, "auth_google", &b.sub).await?;
@@ -51,6 +51,7 @@ impl out::ApiInterface for Api {
 				let r = out::User {
 					id: Uuid::now_v7(),
 					name: b.name,
+					picture: b.picture.unwrap(),
 					auth_email: b.email,
 					auth_google: b.sub,
 					is_active: true,
@@ -58,11 +59,28 @@ impl out::ApiInterface for Api {
 				};
 				r.push(&self.db).await.map(|_| r)?
 			};
-			Ok(w.signed_jwt().map_err(|v| v.to_string())?)
+			Ok(w)
 		};
 		match inner().await {
 			Err(e) => out::AuthapiCallbackOauthResponse::Status400(e),
-			Ok(v) => out::AuthapiCallbackOauthResponse::Status200(v),
+			Ok(v) => {
+				let jwt = v.jwt();
+				let jwt_str = v.signed_jwt();
+				out::AuthapiCallbackOauthResponse::Raw(
+					axum::response::Response::builder()
+						.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
+						.header(
+							"Set-Cookie",
+							format!(
+								"token={jwt_str}; Path=/; Max-Age={age}",
+								age = jwt.age().unwrap_or(86400)
+							),
+						)
+						.header(axum::http::header::LOCATION, "/")
+						.body(axum::body::Body::from(jwt_str))
+						.unwrap(),
+				)
+			}
 		}
 	}
 	async fn userlistapi_user_push(
@@ -101,6 +119,9 @@ impl Collection for out::User {
 }
 
 impl TokenJwtGenerator for out::User {
+	fn secret() -> &'static [u8] {
+		b"abc"
+	}
 	fn jwt(&self) -> auth::TokenJwt {
 		auth::TokenJwt {
 			sub: self.id.to_string(),
