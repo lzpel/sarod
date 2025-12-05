@@ -75,7 +75,7 @@ interface AuthApi {
 	@doc("""
 		ログアウト
 	""")
-	@route("/out") @get out(): NotFoundResponse
+	@route("/out") @get out(): NoContentResponse
 }
 
 @useAuth(BearerAuth)

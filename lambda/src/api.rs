@@ -124,10 +124,10 @@ impl out::ApiInterface for Api {
 		req: out::UserapiUserPopRequest,
 	) -> out::UserapiUserPopResponse {
 		let Some(v) = Self::auth(req) else {
-			return out::UserapiUserPopResponse::Status403();
+			return out::UserapiUserPopResponse::Status403;
 		};
 		match out::User::pop(&self.db, &v.sub).await {
-			Ok(_) => out::UserapiUserPopResponse::Status204(),
+			Ok(_) => out::UserapiUserPopResponse::Status204,
 			Err(e) => out::UserapiUserPopResponse::Status400(e),
 		}
 	}
@@ -136,7 +136,7 @@ impl out::ApiInterface for Api {
 		req: out::UserapiUserGetRequest,
 	) -> out::UserapiUserGetResponse {
 		let Some(v) = Self::auth(req) else {
-			return out::UserapiUserGetResponse::Status403();
+			return out::UserapiUserGetResponse::Status403;
 		};
 		match out::User::get(&self.db, &v.sub).await {
 			Ok(u) => out::UserapiUserGetResponse::Status200(u),
@@ -148,7 +148,7 @@ impl out::ApiInterface for Api {
 		req: out::RuleapiRuleListRequest,
 	) -> out::RuleapiRuleListResponse {
 		let Some(v) = Self::auth(req) else {
-			return out::RuleapiRuleListResponse::Status403();
+			return out::RuleapiRuleListResponse::Status403;
 		};
 		match out::Rule::query(&self.db, "id_root", &v.sub).await {
 			Ok(u) => out::RuleapiRuleListResponse::Status200(u),
@@ -160,7 +160,7 @@ impl out::ApiInterface for Api {
 		req: out::RuleapiRulePushRequest,
 	) -> out::RuleapiRulePushResponse {
 		let Some(v) = Self::auth(&req) else {
-			return out::RuleapiRulePushResponse::Status403();
+			return out::RuleapiRulePushResponse::Status403;
 		};
 		let inner = async |r: &out::Rule| -> Result<out::Rule, String> {
 			let r = out::Rule {
