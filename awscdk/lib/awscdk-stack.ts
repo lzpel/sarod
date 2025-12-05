@@ -16,10 +16,10 @@ export class AwscdkStack extends cdk.Stack {
 			{
 			}
 		)
-		
+
 		const bucket = new cdk.aws_s3.Bucket(this, 'uuid');
 		bucket.grantReadWrite(api.lambda)//s3読み書き権限設定
-		
+
 		//キャッシュを提供するコンテンツ配信ネットワーク(CDN)(Cloud Front)を用意
 		const distribution = new cdk.aws_cloudfront.Distribution(this, "cloudfront", {
 			defaultBehavior: {
@@ -30,14 +30,20 @@ export class AwscdkStack extends cdk.Stack {
 				cachePolicy: cdk.aws_cloudfront.CachePolicy.CACHING_DISABLED,
 				originRequestPolicy: cdk.aws_cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
 			},
+			additionalBehaviors: {
+				"/s/*": {
+					origin: new cdk.aws_cloudfront_origins.S3Origin(bucket),
+					viewerProtocolPolicy: cdk.aws_cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+				}
+			},
 			//AWS Certificate Manager (ACM)から*.surfic.comへの証明書を発行してもらった
 			//証明書という名前だがファイルではなくDNSのCNAMEにAWSが指定する特定の値が入っていることで証明する、
-			domainNames:["sarod.surfic.com"]
+			domainNames: ["sarod.surfic.com"]
 		});
 
 		// URL を CloudFormation の Output に出しておくと便利
-		new cdk.CfnOutput(this, 'FUNCTION_URL', {value: api.lambda_url.url});
-		new cdk.CfnOutput(this, "DOMAIN", {value: distribution.domainName});
+		new cdk.CfnOutput(this, 'FUNCTION_URL', { value: api.lambda_url.url });
+		new cdk.CfnOutput(this, "DOMAIN", { value: distribution.domainName });
 	}
 }
 
@@ -58,5 +64,5 @@ const docker_image_function = (
 		authType: cdk.aws_lambda.FunctionUrlAuthType.NONE,
 		...props_url
 	})
-	return {lambda, lambda_url}
+	return { lambda, lambda_url }
 }

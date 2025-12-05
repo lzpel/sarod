@@ -123,11 +123,14 @@ impl TokenJwtGenerator for out::User {
 		b"abc"
 	}
 	fn jwt(&self) -> auth::TokenJwt {
-		auth::TokenJwt {
+		let o=auth::TokenJwt {
 			sub: self.id.to_string(),
 			email: self.auth_email.clone(),
 			name: self.name.clone(),
+			picture: Some(self.picture.clone()),
 			..Default::default()
-		}
+		};
+		println!("{:?}", o);
+		o
 	}
 }

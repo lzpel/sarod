@@ -8,7 +8,7 @@
  * 署名の正当性は一切確認しないので、
  * 信頼できる場面での「中身を見る専用」に使うこと。
  */
-function decodeJwtPayload<T = any>(token: string): T | null {
+export default function decodeJwtPayload<T = any>(token: string): T | null {
   try {
     const parts = token.split(".");
     if (parts.length < 2) return null;
@@ -24,7 +24,7 @@ function decodeJwtPayload<T = any>(token: string): T | null {
 /**
  * ついでにヘッダも見たい場合用
  */
-function decodeJwtHeader<T = any>(token: string): T | null {
+export function decodeJwtHeader<T = any>(token: string): T | null {
   try {
     const parts = token.split(".");
     if (parts.length < 1) return null;
@@ -36,13 +36,6 @@ function decodeJwtHeader<T = any>(token: string): T | null {
     return null;
   }
 }
-
-export type MyJwtPayload = {
-  sub: string;
-  email?: string;
-  exp?: number;
-  name: string;
-};
 /**
  * Base64URL 文字列を UTF-8 文字列にデコードする
  * 依存なし（Node なら Buffer, ブラウザなら atob を使用）
