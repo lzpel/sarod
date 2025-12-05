@@ -26,6 +26,22 @@ impl Api {
 	}
 }
 impl out::ApiInterface for Api {
+	async fn authapi_email(
+		&self,
+		req: out::AuthapiEmailRequest,
+	) -> out::AuthapiEmailResponse {
+		let r = out::User {
+			id: Uuid::now_v7(),
+			name: req.body.name,
+			auth_email: req.body.auth_email,
+			auth_email_password: req.body.auth_email_password,
+			..Default::default()
+		};
+		match r.push(&self.db).await {
+			Ok(_) => return out::AuthapiEmailResponse::Status200(r.signed_jwt()),
+			Err(e) => return out::AuthapiEmailResponse::Status400(e.to_string()),
+		}
+	}
 	async fn authapi_google(&self, req: out::AuthapiGoogleRequest) -> out::AuthapiGoogleResponse {
 		let redirect_uri = self.google.redirect_uri(&req.redirect);
 		//?state=019ae005-152c-7971-b81f-a60c749498b1&code=4%2F0Ab32j91qKnhNiU2ELrr4xE2579NVRRrVlZGMcaeJRIib8U_WDIeXt1axRTc2rdppI9XGEA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent
@@ -83,29 +99,53 @@ impl out::ApiInterface for Api {
 			}
 		}
 	}
-	async fn userlistapi_user_push(
-		&self,
-		req: out::UserlistapiUserPushRequest,
-	) -> out::UserlistapiUserPushResponse {
-		if req.body.auth_google.is_some()
-			|| (req.body.auth_email.is_some() && req.body.auth_email_password.is_some())
-		{
-			let r = out::User {
-				id: Uuid::now_v7(),
-				name: req.body.name,
-				auth_email: req.body.auth_email.unwrap_or_default(),
-				auth_google: req.body.auth_google.unwrap_or_default(),
-				auth_email_password: req.body.auth_email_password.unwrap_or_default(),
-				..Default::default()
-			};
-			match r.push(&self.db).await {
-				Ok(_) => return out::UserlistapiUserPushResponse::Status200(r),
-				Err(e) => return out::UserlistapiUserPushResponse::Status400(e.to_string()),
-			}
-		}
-		out::UserlistapiUserPushResponse::Status400(
-			"require google-auth or email-auth(address and password)".into(),
+	async fn authapi_out(
+			&self,
+			_req: out::AuthapiOutRequest,
+		) -> out::AuthapiOutResponse {
+		out::AuthapiOutResponse::Raw(
+			axum::response::Response::builder()
+				.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
+				.header(
+					"Set-Cookie",
+					format!(
+						"token=; Path=/; Max-Age=0",
+					),
+				)
+				.header(axum::http::header::LOCATION, "/")
+				.body(axum::body::Body::empty())
+				.unwrap(),
 		)
+	}
+	async fn userapi_user_pop(
+			&self,
+			req: out::UserapiUserPopRequest,
+		) -> out::UserapiUserPopResponse {
+		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+	}
+	async fn userapi_user_get(
+			&self,
+			req: out::UserapiUserGetRequest,
+		) -> out::UserapiUserGetResponse {
+		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+	}
+	async fn ruleapi_rule_list(
+			&self,
+			_req: out::RuleapiRuleListRequest,
+		) -> out::RuleapiRuleListResponse {
+		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+	}
+	async fn ruleapi_rule_push(
+			&self,
+			_req: out::RuleapiRulePushRequest,
+		) -> out::RuleapiRulePushResponse {
+		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+	}
+	async fn ruleapi_rule_edit(
+			&self,
+			_req: out::RuleapiRuleEditRequest,
+		) -> out::RuleapiRuleEditResponse {
+		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
 	}
 }
 
@@ -123,7 +163,7 @@ impl TokenJwtGenerator for out::User {
 		b"abc"
 	}
 	fn jwt(&self) -> auth::TokenJwt {
-		let o=auth::TokenJwt {
+		let o = auth::TokenJwt {
 			sub: self.id.to_string(),
 			email: self.auth_email.clone(),
 			name: self.name.clone(),

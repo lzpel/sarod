@@ -1,4 +1,4 @@
-import React from 'react';
+// Twitter Home.rs
 import {
 	Home, Search, Bell, Mail, User, MoreHorizontal,
 	Feather, Image as ImageIcon, Smile, MapPin,

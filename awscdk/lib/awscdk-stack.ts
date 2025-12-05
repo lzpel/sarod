@@ -1,7 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import path from 'path';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class AwscdkStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -12,9 +11,6 @@ export class AwscdkStack extends cdk.Stack {
 			this,
 			"api",
 			path.join(__dirname, '../../lambda'),
-			{},
-			{
-			}
 		)
 
 		const bucket = new cdk.aws_s3.Bucket(this, 'uuid');

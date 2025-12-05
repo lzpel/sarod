@@ -64,30 +64,25 @@ model Subscription {
 @route("/auth")
 interface AuthApi {
 	@doc("""
+		ユーザーを追加します、認証が不要だが、メールアドレスが確認されるまでアクティベートされない
+	""")
+	@post email(name: string, auth_email: string, auth_email_password: string): string | BadRequestResponse;
+	@doc("""
 		google ログイン
 	""")
 	@route("/google") @get google(@query redirect: string): string;
 	@doc("""
 		oauth コールバック用
 	""")
-	@route("/callback_oauth") @get callback_oauth(@query code: string, @query state: string): string|BadRequestResponse
+	@route("/callback_oauth") @get callback_oauth(@query code: string, @query state: string): string|BadRequestResponse;
+	@doc("""
+		ログアウト
+	""")
+	@route("/out") @get out(): NotFoundResponse
 }
 
+@useAuth(BearerAuth)
 @route("/user")
-interface UserListApi {
-	@doc("""
-		ユーザー一覧を返します
-	""")
-	@get user_list(): User[] | NotFoundResponse;
-	@doc("""
-		ユーザー一覧を追加します、登録前にGoogle アカウントやメールアドレスの認証が必要
-		( auth_email && auth_email_password ) || auth_google
-	""")
-	@post user_push(name: string, auth_email?: string, auth_email_password?: string, auth_google?: string): User | BadRequestResponse;
-}
-
-
-@route("/user/{id}")
 interface UserApi {
 	@doc("""
 		ユーザーを削除します、認証が必要
@@ -97,4 +92,22 @@ interface UserApi {
 		ユーザー情報を取得します、認証が必要
 	""")
 	@get user_get(@path id: UUID): User | BadRequestResponse;
+}
+
+// 一個一個のルールを編集する
+@useAuth(BearerAuth)
+@route("/rule")
+interface RuleApi {
+	@doc("""
+		ルール一覧を返します
+	""")
+	@get rule_list(): Rule[] | BadRequestResponse;
+	@doc("""
+		ルールを追加します
+	""")
+	@post rule_push(rule: Rule): Rule | BadRequestResponse;
+	@doc("""
+		ルールを編集します
+	""")
+	@post rule_edit(@path id: UUID, rule: Rule): Rule | BadRequestResponse;
 }

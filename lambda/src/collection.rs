@@ -31,4 +31,13 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			.map_err(|v| v.to_string())?;
 		Ok(users)
 	}
+	async fn pop(&self, db: &firestore::FirestoreDb) -> Result<(), String> {
+		db.fluent()
+			.delete()
+			.from(Self::collection_name())
+			.document_id(&self.document_id())
+			.execute()
+			.await
+			.map_err(|v| v.to_string())
+	}
 }
