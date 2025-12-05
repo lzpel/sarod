@@ -24,12 +24,22 @@ impl Api {
 			.map_err(|v| v.to_string())?,
 		})
 	}
+	pub fn auth(req: impl AsRef<axum::http::Request<axum::body::Body>>) -> Option<auth::TokenJwt> {
+		let auth = req
+			.as_ref()
+			.headers()
+			.get("Authorization")
+			.and_then(|v| v.to_str().ok());
+		if let Some(auth) = auth {
+			if let Ok(jwt) = out::User::validate_jwt(auth) {
+				return Some(jwt);
+			}
+		}
+		None
+	}
 }
 impl out::ApiInterface for Api {
-	async fn authapi_email(
-		&self,
-		req: out::AuthapiEmailRequest,
-	) -> out::AuthapiEmailResponse {
+	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
 		let r = out::User {
 			id: Uuid::now_v7(),
 			name: req.body.name,
@@ -99,59 +109,85 @@ impl out::ApiInterface for Api {
 			}
 		}
 	}
-	async fn authapi_out(
-			&self,
-			_req: out::AuthapiOutRequest,
-		) -> out::AuthapiOutResponse {
+	async fn authapi_out(&self, _req: out::AuthapiOutRequest) -> out::AuthapiOutResponse {
 		out::AuthapiOutResponse::Raw(
 			axum::response::Response::builder()
 				.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
-				.header(
-					"Set-Cookie",
-					format!(
-						"token=; Path=/; Max-Age=0",
-					),
-				)
+				.header("Set-Cookie", format!("token=; Path=/; Max-Age=0",))
 				.header(axum::http::header::LOCATION, "/")
 				.body(axum::body::Body::empty())
 				.unwrap(),
 		)
 	}
 	async fn userapi_user_pop(
-			&self,
-			req: out::UserapiUserPopRequest,
-		) -> out::UserapiUserPopResponse {
-		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+		&self,
+		req: out::UserapiUserPopRequest,
+	) -> out::UserapiUserPopResponse {
+		let Some(v) = Self::auth(req) else {
+			return out::UserapiUserPopResponse::Status403();
+		};
+		match out::User::pop(&self.db, &v.sub).await {
+			Ok(_) => out::UserapiUserPopResponse::Status204(),
+			Err(e) => out::UserapiUserPopResponse::Status400(e),
+		}
 	}
 	async fn userapi_user_get(
-			&self,
-			req: out::UserapiUserGetRequest,
-		) -> out::UserapiUserGetResponse {
-		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+		&self,
+		req: out::UserapiUserGetRequest,
+	) -> out::UserapiUserGetResponse {
+		let Some(v) = Self::auth(req) else {
+			return out::UserapiUserGetResponse::Status403();
+		};
+		match out::User::get(&self.db, &v.sub).await {
+			Ok(u) => out::UserapiUserGetResponse::Status200(u),
+			Err(e) => out::UserapiUserGetResponse::Status400(e),
+		}
 	}
 	async fn ruleapi_rule_list(
-			&self,
-			_req: out::RuleapiRuleListRequest,
-		) -> out::RuleapiRuleListResponse {
-		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+		&self,
+		req: out::RuleapiRuleListRequest,
+	) -> out::RuleapiRuleListResponse {
+		let Some(v) = Self::auth(req) else {
+			return out::RuleapiRuleListResponse::Status403();
+		};
+		match out::Rule::query(&self.db, "id_root", &v.sub).await {
+			Ok(u) => out::RuleapiRuleListResponse::Status200(u),
+			Err(e) => out::RuleapiRuleListResponse::Status400(e),
+		}
 	}
 	async fn ruleapi_rule_push(
-			&self,
-			_req: out::RuleapiRulePushRequest,
-		) -> out::RuleapiRulePushResponse {
-		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
-	}
-	async fn ruleapi_rule_edit(
-			&self,
-			_req: out::RuleapiRuleEditRequest,
-		) -> out::RuleapiRuleEditResponse {
-		todo!("この実装には認証結果を得るようにmandolinを改良する必要がある")
+		&self,
+		req: out::RuleapiRulePushRequest,
+	) -> out::RuleapiRulePushResponse {
+		let Some(v) = Self::auth(&req) else {
+			return out::RuleapiRulePushResponse::Status403();
+		};
+		let inner = async |r: &out::Rule| -> Result<out::Rule, String> {
+			let r = out::Rule {
+				id: Uuid::now_v7(),
+				id_root: v.sub.try_into().unwrap(),
+				..r.clone()
+			};
+			r.push(&self.db).await.map(|_| r)
+		};
+		match inner(&req.body.rule).await {
+			Ok(u) => out::RuleapiRulePushResponse::Status200(u),
+			Err(e) => out::RuleapiRulePushResponse::Status400(e),
+		}
 	}
 }
 
 impl Collection for out::User {
 	fn collection_name() -> &'static str {
 		"user"
+	}
+	fn document_id(&self) -> String {
+		self.id.to_string()
+	}
+}
+impl Collection for out::Rule {
+	fn collection_name() -> &'static str {
+		"rule"
 	}
 	fn document_id(&self) -> String {
 		self.id.to_string()

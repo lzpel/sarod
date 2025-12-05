@@ -5,17 +5,14 @@ using Http;
 @server("/api", "開発用")
 namespace DemoService;
 
-model Response<code extends numeric> {
+model Response<code extends numeric, Body> {
 	@statusCode statusCode: code;
+	@body body: Body;
 }
-@error
-model ErrorResponse<code extends numeric> extends Response<code> {
-	@header contentType: "text/plain";
-	@body value: string;
-}
-model NoContentResponse is Response<204>;
-model NotFoundResponse is ErrorResponse<404>;
-model BadRequestResponse is ErrorResponse<400>;
+model NoContentResponse is Response<204, null>;
+model BadRequestResponse is Response<400, string>;
+model ForbiddenResponse is Response<403, null>;
+model NotFoundResponse is Response<404, null>;
 @format("uuid")
 scalar UUID extends string;
 
@@ -87,11 +84,11 @@ interface UserApi {
 	@doc("""
 		ユーザーを削除します、認証が必要
 	""")
-	@delete user_pop(@path id: UUID): User | BadRequestResponse;
+	@delete user_pop(@path id: UUID): NoContentResponse | ForbiddenResponse | BadRequestResponse;
 	@doc("""
 		ユーザー情報を取得します、認証が必要
 	""")
-	@get user_get(@path id: UUID): User | BadRequestResponse;
+	@get user_get(@path id: UUID): User | ForbiddenResponse | BadRequestResponse;
 }
 
 // 一個一個のルールを編集する
@@ -101,13 +98,9 @@ interface RuleApi {
 	@doc("""
 		ルール一覧を返します
 	""")
-	@get rule_list(): Rule[] | BadRequestResponse;
+	@get rule_list(): Rule[] | ForbiddenResponse | BadRequestResponse;
 	@doc("""
-		ルールを追加します
+		ルールを追加/更新します
 	""")
-	@post rule_push(rule: Rule): Rule | BadRequestResponse;
-	@doc("""
-		ルールを編集します
-	""")
-	@post rule_edit(@path id: UUID, rule: Rule): Rule | BadRequestResponse;
+	@post rule_push(rule: Rule): Rule | ForbiddenResponse | BadRequestResponse;
 }

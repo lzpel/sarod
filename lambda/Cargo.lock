@@ -932,9 +932,9 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mandolin"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fd99f81287cc49fc9dcf10b70f5f31834e70825d48423687ac157efd42bebd2"
+checksum = "d412bc8744a139368cdf09082b43fa956c664b206e6802a5707ddd09d3a1fe1f"
 dependencies = [
  "minijinja",
  "openapiv3",
@@ -1241,7 +1241,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

@@ -1,6 +1,5 @@
 use reqwest;
 use serde::{Deserialize, Serialize};
-use std::hash::Hasher;
 
 #[derive(Debug, Deserialize)]
 pub struct GoogleOAuthSecret {

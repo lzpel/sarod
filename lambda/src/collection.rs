@@ -1,6 +1,20 @@
 pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync + Send {
 	fn collection_name() -> &'static str;
 	fn document_id(&self) -> String;
+	async fn get(db: &firestore::FirestoreDb, document_id: &str) -> Result<Self, String> {
+		let v: Option<Self> = db
+			.fluent()
+			.select()
+			.by_id_in(Self::collection_name())
+			.obj()
+			.one(document_id)
+			.await
+			.map_err(|v| v.to_string())?;
+		match v {
+			Some(v) => Ok(v),
+			None => Err("not found".to_string()),
+		}
+	}
 	async fn push(&self, db: &firestore::FirestoreDb) -> Result<(), String> {
 		db.fluent()
 			.insert()
@@ -31,11 +45,11 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			.map_err(|v| v.to_string())?;
 		Ok(users)
 	}
-	async fn pop(&self, db: &firestore::FirestoreDb) -> Result<(), String> {
+	async fn pop(db: &firestore::FirestoreDb, document_id: &str) -> Result<(), String> {
 		db.fluent()
 			.delete()
 			.from(Self::collection_name())
-			.document_id(&self.document_id())
+			.document_id(document_id)
 			.execute()
 			.await
 			.map_err(|v| v.to_string())
