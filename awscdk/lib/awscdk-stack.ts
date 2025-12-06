@@ -34,7 +34,7 @@ export class AwscdkStack extends cdk.Stack {
 			},
 			//AWS Certificate Manager (ACM)から*.surfic.comへの証明書を発行してもらった
 			//証明書という名前だがファイルではなくDNSのCNAMEにAWSが指定する特定の値が入っていることで証明する、
-			domainNames: ["sarod.surfic.com"]
+			domainNames: ["mimamori.surfic.com"]
 		});
 
 		// URL を CloudFormation の Output に出しておくと便利

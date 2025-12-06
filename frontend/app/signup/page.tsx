@@ -2,7 +2,6 @@
 import Sign from "@/stateless_ui/sign";
 import { useAuth } from "@/src/AuthProvider";
 import { Redirect } from "@/src/redirect";
-import Profile from "@/stateless_ui/Profile";
 
 export default function Home() {
 	const { iam } = useAuth();
@@ -11,7 +10,9 @@ export default function Home() {
 	}
 	return (
 		<>
-			<Profile />
+			<div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+				<Sign auth_uri="/api/auth/google" redirect_uri={`${typeof window !== "undefined" ? window.location.origin : ""}/api/auth/callback_oauth`} />
+			</div>
 		</>
 	);
 }

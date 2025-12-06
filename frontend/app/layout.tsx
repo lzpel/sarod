@@ -16,6 +16,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: "Sarod",
 	description: "AI agent for everyone",
+	viewport: {
+		width: "device-width",
+		initialScale: 1,
+	}
 };
 
 export default function RootLayout({
