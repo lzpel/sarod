@@ -1,7 +1,13 @@
 "use client"
 import Sign from "@/stateless_ui/sign";
+import { useAuth } from "@/src/AuthProvider";
+import { Redirect } from "@/src/redirect";
 
 export default function Home() {
+	const { iam } = useAuth();
+	if (iam) {
+		return <Redirect target="/home" />
+	}
 	const origin = typeof window !== "undefined" ? window.location.origin : "aa";
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
