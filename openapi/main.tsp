@@ -84,11 +84,11 @@ interface UserApi {
 	@doc("""
 		ユーザーを削除します、認証が必要
 	""")
-	@delete user_pop(@path id: UUID): NoContentResponse | ForbiddenResponse | BadRequestResponse;
+	@delete user_pop(): NoContentResponse | ForbiddenResponse | BadRequestResponse;
 	@doc("""
 		ユーザー情報を取得します、認証が必要
 	""")
-	@get user_get(@path id: UUID): User | ForbiddenResponse | BadRequestResponse;
+	@get user_get(): User | ForbiddenResponse | BadRequestResponse;
 }
 
 // 一個一個のルールを編集する

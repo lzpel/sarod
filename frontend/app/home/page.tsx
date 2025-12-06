@@ -1,18 +1,18 @@
 "use client"
 import TwitterHome, { TwitterUser } from "@/stateless_ui/TwitterHome"
-import { client_jwt } from "@/src/standard"
+import { useAuth } from "@/src/AuthProvider";
+import { Redirect } from "@/src/redirect";
 export default function page() {
-	const n = client_jwt()
-	console.log(n)
-	if (n) {
+	const { iam } = useAuth();
+	if (iam) {
 		const x: TwitterUser = {
-			name: n.name,
-			sub: n.sub,
-			picture: n.picture,
+			name: iam.name,
+			sub: iam.id,
+			picture: iam.picture,
 		}
-		console.log(x)
 		return <TwitterHome user={x}>
 		</TwitterHome>
+	}else{
+		return <Redirect target="/" />
 	}
-	return "un auth"
 }

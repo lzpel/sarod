@@ -2,19 +2,6 @@ use reqwest;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub struct GoogleOAuthSecret {
-	web: OAuth,
-}
-
-impl GoogleOAuthSecret {
-	pub fn load(path: &str) -> Result<OAuth, String> {
-		let data = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-		let parsed: GoogleOAuthSecret = serde_json::from_str(&data).map_err(|e| e.to_string())?;
-		Ok(parsed.web)
-	}
-}
-
-#[derive(Debug, Deserialize)]
 pub struct OAuth {
 	pub client_id: String,
 	pub client_secret: String,
@@ -24,6 +11,20 @@ pub struct OAuth {
 
 impl OAuth {
 	const SEPRATOR: &str = ">>>";
+	//JSONファイル内の特定のフィールド（またはトップレベル）をターゲットとしてOAuthにパース
+	pub fn load(path: &str, field: Option<&str>) -> Result<Self, String> {
+		// 1. ファイルを読み込む
+		let data = std::fs::read_to_string(path).map_err(|e| format!("ファイル読み込みエラー: {}", e))?;
+		// 2. JSON全体をserde_json::Valueとしてパースする
+		let value: serde_json::Value = serde_json::from_str(&data).map_err(|e| format!("JSONパースエラー: {}", e))?;
+		let target_value = if let Some(field_name) = field {
+			value.get(field_name).ok_or_else(|| format!("指定されたフィールド '{}' がJSONに見つかりません", field_name))?
+		} else {
+			&value
+		};
+		let oauth: Self = serde_json::from_value(target_value.clone()).map_err(|e| format!("OAuth構造体へのデシリアライズエラー: {}", e))?;
+		Ok(oauth)
+	}
 	pub fn redirect_uri(&self, redirect_uri: &str) -> String {
 		let start_time = timestamp();
 		format!(

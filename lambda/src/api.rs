@@ -1,4 +1,4 @@
-use crate::auth;
+use crate::auth::{self, OAuth};
 use crate::auth::TokenJwtGenerator;
 use crate::collection::Collection;
 use crate::out;
@@ -12,30 +12,53 @@ pub struct Api {
 impl Api {
 	pub async fn new() -> Result<Self, String> {
 		Ok(Self {
-			google: auth::GoogleOAuthSecret::load(
-				"secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json",
-			)?,
+			google: OAuth::load("secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json", Some("web"),)?,
 			db: firestore::FirestoreDb::with_options_service_account_key_file(
-				firestore::FirestoreDbOptions::new("lzpel-net".into())
-					.with_database_id("sarod".into()),
+				firestore::FirestoreDbOptions::new("lzpel-net".into()).with_database_id("sarod".into()),
 				"secret/sarod_firestore.json".into(),
 			)
 			.await
 			.map_err(|v| v.to_string())?,
 		})
 	}
-	pub fn auth(req: impl AsRef<axum::http::Request<axum::body::Body>>) -> Option<auth::TokenJwt> {
-		let auth = req
+	pub fn jwt_get(
+		req: impl AsRef<axum::http::Request<axum::body::Body>>,
+	) -> Option<auth::TokenJwt> {
+		// AuthorizationヘッダではなくCookieのtokenで認証する：取得関数
+
+		// Cookie ヘッダを文字列として取得
+		let cookie_header = req
 			.as_ref()
 			.headers()
-			.get("Authorization")
-			.and_then(|v| v.to_str().ok());
-		if let Some(auth) = auth {
-			if let Ok(jwt) = out::User::validate_jwt(auth) {
-				return Some(jwt);
-			}
-		}
-		None
+			.get(axum::http::header::COOKIE)
+			.and_then(|v| v.to_str().ok())?;
+
+		// "a=b; token=xxx.yyy.zzz; c=d" みたいな文字列から token の値だけ抜き出す
+		let token = cookie_header
+			.split(';')
+			.map(|s| s.trim())
+			.find_map(|pair| {
+				let mut parts = pair.splitn(2, '=');
+				let name = parts.next()?.trim();
+				let value = parts.next()?.trim();
+				(name == "token").then(|| value)
+			})?;
+		out::User::validate_jwt(token).ok()
+	}
+	pub fn jwt_set(v: Option<impl TokenJwtGenerator>) -> axum::http::Response<axum::body::Body> {
+		// AuthorizationヘッダではなくCookieのtokenで認証する：設定関数
+		let jwt = v
+			.map(|v| (v.signed_jwt(), v.jwt().age().unwrap_or(86400)))
+			.unwrap_or_default();
+		axum::response::Response::builder()
+			.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
+			.header(
+				"Set-Cookie",
+				format!("token={}; Path=/; Max-Age={}", jwt.0, jwt.1),
+			)
+			.header(axum::http::header::LOCATION, "/")
+			.body(axum::body::Body::from(jwt.0))
+			.unwrap()
 	}
 }
 impl out::ApiInterface for Api {
@@ -110,20 +133,13 @@ impl out::ApiInterface for Api {
 		}
 	}
 	async fn authapi_out(&self, _req: out::AuthapiOutRequest) -> out::AuthapiOutResponse {
-		out::AuthapiOutResponse::Raw(
-			axum::response::Response::builder()
-				.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
-				.header("Set-Cookie", format!("token=; Path=/; Max-Age=0",))
-				.header(axum::http::header::LOCATION, "/")
-				.body(axum::body::Body::empty())
-				.unwrap(),
-		)
+		out::AuthapiOutResponse::Raw(Self::jwt_set(None::<out::User>))
 	}
 	async fn userapi_user_pop(
 		&self,
 		req: out::UserapiUserPopRequest,
 	) -> out::UserapiUserPopResponse {
-		let Some(v) = Self::auth(req) else {
+		let Some(v) = Self::jwt_get(req) else {
 			return out::UserapiUserPopResponse::Status403;
 		};
 		match out::User::pop(&self.db, &v.sub).await {
@@ -135,7 +151,7 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::UserapiUserGetRequest,
 	) -> out::UserapiUserGetResponse {
-		let Some(v) = Self::auth(req) else {
+		let Some(v) = Self::jwt_get(req) else {
 			return out::UserapiUserGetResponse::Status403;
 		};
 		match out::User::get(&self.db, &v.sub).await {
@@ -147,7 +163,7 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::RuleapiRuleListRequest,
 	) -> out::RuleapiRuleListResponse {
-		let Some(v) = Self::auth(req) else {
+		let Some(v) = Self::jwt_get(req) else {
 			return out::RuleapiRuleListResponse::Status403;
 		};
 		match out::Rule::query(&self.db, "id_root", &v.sub).await {
@@ -159,7 +175,7 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::RuleapiRulePushRequest,
 	) -> out::RuleapiRulePushResponse {
-		let Some(v) = Self::auth(&req) else {
+		let Some(v) = Self::jwt_get(&req) else {
 			return out::RuleapiRulePushResponse::Status403;
 		};
 		let inner = async |r: &out::Rule| -> Result<out::Rule, String> {
