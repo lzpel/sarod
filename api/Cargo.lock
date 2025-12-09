@@ -932,9 +932,9 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mandolin"
-version = "0.2.2"
+version = "0.2.3-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b971cabfb9c45b1ad9911d686bdae23dc87b39469c76df8bad090157cccb25c"
+checksum = "9648668bc7537b384881a67cb46486dd2c580a0158cce9bdb967bc1e04a00d51"
 dependencies = [
  "minijinja",
  "openapiv3",

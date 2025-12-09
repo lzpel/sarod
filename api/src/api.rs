@@ -54,7 +54,7 @@ impl Api {
 		let jwt = v
 			.map(|v| (v.signed_jwt(), v.jwt().age().unwrap_or(86400)))
 			.unwrap_or_default();
-		axum::response::Response::builder()
+		Uuid::axum::response::Response::builder()
 			.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
 			.header(
 				"Set-Cookie",
@@ -66,6 +66,33 @@ impl Api {
 	}
 }
 impl out::ApiInterface for Api {
+	async fn authorize(
+			&self,
+			req: axum::http::Request<axum::body::Body>,
+		) -> Result<out::AuthContext, String> {
+		// まだどのタイプの認証方式が指定されているのか見分けていない
+		// Cookie ヘッダを文字列として取得
+		let cookie_header = req
+			.headers()
+			.get(axum::http::header::COOKIE)
+			.and_then(|v| v.to_str().ok()).unwrap_or_default();
+		// "a=b; token=xxx.yyy.zzz; c=d" みたいな文字列から token の値だけ抜き出す
+		let token = cookie_header
+			.split(';')
+			.map(|s| s.trim())
+			.find_map(|pair| {
+				let mut parts = pair.splitn(2, '=');
+				let name = parts.next()?.trim();
+				let value = parts.next()?.trim();
+				(name == "token").then(|| value)
+			}).unwrap_or_default();
+		out::User::validate_jwt(token).map(|v| 
+			out::AuthContext{
+				subject: v.sub,
+				..Default::default()
+			}
+		).map_err(|v| v.to_string())
+	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
 		let r = out::User {
 			id: Uuid::now_v7(),
