@@ -1,5 +1,5 @@
-use crate::auth::{self, OAuth};
 use crate::auth::TokenJwtGenerator;
+use crate::auth::{self, OAuth};
 use crate::collection::Collection;
 use crate::out;
 use firestore;
@@ -12,9 +12,13 @@ pub struct Api {
 impl Api {
 	pub async fn new() -> Result<Self, String> {
 		Ok(Self {
-			google: OAuth::load("secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json", Some("web"),)?,
+			google: OAuth::load(
+				"secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json",
+				Some("web"),
+			)?,
 			db: firestore::FirestoreDb::with_options_service_account_key_file(
-				firestore::FirestoreDbOptions::new("lzpel-net".into()).with_database_id("sarod".into()),
+				firestore::FirestoreDbOptions::new("lzpel-net".into())
+					.with_database_id("sarod".into()),
 				"secret/sarod_firestore.json".into(),
 			)
 			.await

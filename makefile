@@ -1,5 +1,5 @@
-MAKE_RECURSIVE_DIRS := openapi frontend lambda proxy awscdk
-OUT_FRONTEND_DIR := lambda/out
+MAKE_RECURSIVE_DIRS := openapi frontend api proxy awscdk
+OUT_FRONTEND_DIR := api/out
 SECRET_DIR_AGE := secret secret.age
 define MAKE_RECURSIVE
 if [ -n "$${MAKE_RECURSIVE_PARALLEL}" ]; then
