@@ -67,15 +67,16 @@ impl Api {
 }
 impl out::ApiInterface for Api {
 	async fn authorize(
-			&self,
-			req: axum::http::Request<axum::body::Body>,
-		) -> Result<out::AuthContext, String> {
+		&self,
+		req: axum::http::Request<axum::body::Body>,
+	) -> Result<out::AuthContext, String> {
 		// まだどのタイプの認証方式が指定されているのか見分けていない
 		// Cookie ヘッダを文字列として取得
 		let cookie_header = req
 			.headers()
 			.get(axum::http::header::COOKIE)
-			.and_then(|v| v.to_str().ok()).unwrap_or_default();
+			.and_then(|v| v.to_str().ok())
+			.unwrap_or_default();
 		// "a=b; token=xxx.yyy.zzz; c=d" みたいな文字列から token の値だけ抜き出す
 		let token = cookie_header
 			.split(';')
@@ -85,13 +86,14 @@ impl out::ApiInterface for Api {
 				let name = parts.next()?.trim();
 				let value = parts.next()?.trim();
 				(name == "token").then(|| value)
-			}).unwrap_or_default();
-		out::User::validate_jwt(token).map(|v| 
-			out::AuthContext{
+			})
+			.unwrap_or_default();
+		out::User::validate_jwt(token)
+			.map(|v| out::AuthContext {
 				subject: v.sub,
 				..Default::default()
-			}
-		).map_err(|v| v.to_string())
+			})
+			.map_err(|v| v.to_string())
 	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
 		let r = out::User {

@@ -1,5 +1,5 @@
 generate: secret
-	cargo run --example generate
+	( mandolin -h || cargo install mandolin ) && mandolin -i ../out/openapi.json -o src/out.rs
 	cargo fmt
 	find .. . -maxdepth 1 -name .gitignore | xargs -IX sed '/^#\s*EOF_DOCKERIGNORE.*/q' X > .dockerignore
 run:
