@@ -54,7 +54,7 @@ impl Api {
 		let jwt = v
 			.map(|v| (v.signed_jwt(), v.jwt().age().unwrap_or(86400)))
 			.unwrap_or_default();
-		Uuid::axum::response::Response::builder()
+		axum::response::Response::builder()
 			.status(axum::http::StatusCode::TEMPORARY_REDIRECT)
 			.header(
 				"Set-Cookie",
