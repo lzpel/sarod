@@ -18,9 +18,7 @@ run: # 開発用のサーバー起動コマンド フォアグラウンド実行
 deploy: # 本番用のサーバー起動コマンド バックグラウンド実行されます
 	bash -c "$${MAKE_RECURSIVE}"
 rage: # 暗号化
-	tar czvf $(lastword $(SECRET_DIR_AGE)).out -C $(firstword $(SECRET_DIR_AGE)) .
-	rage -p -o $(lastword $(SECRET_DIR_AGE)) $(lastword $(SECRET_DIR_AGE)).out
-	rm $(lastword $(SECRET_DIR_AGE)).out
+	tmp=$$(mktemp) && tar czvf $${tmp} -C $(firstword $(SECRET_DIR_AGE)) . && rage -p -o $(lastword $(SECRET_DIR_AGE)) $${tmp}
 unrage: # 復号化
 	type rage || cargo install rage
 	ls $(firstword $(SECRET_DIR_AGE)) || ( mkdir -p $(firstword $(SECRET_DIR_AGE)) ; rage -d -o - $(lastword $(SECRET_DIR_AGE)) | tar xzv -C $(firstword $(SECRET_DIR_AGE)) )
