@@ -81,40 +81,7 @@ export default function Sign(props: {auth_uri: string, redirect_uri: string}){
 								placeholder="you@example.com"
 							/>
 						</div>
-
-						<div className="space-y-1.5">
-							<label className="block text-xs font-medium text-slate-200">
-								パスワード
-							</label>
-							<input
-								id="password"
-								name="password"
-								type="password"
-								required
-								minLength={8}
-								autoComplete="new-password"
-								className="block w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-950"
-								placeholder="8文字以上で入力してください"
-							/>
-							<p className="text-[11px] text-slate-500">
-								英数字と記号を組み合わせると、より安全になります。
-							</p>
-						</div>
-
-						<div className="space-y-1.5">
-							<label className="block text-xs font-medium text-slate-200">
-								表示名（任意）
-							</label>
-							<input
-								id="name"
-								name="display_name"
-								type="text"
-								autoComplete="nickname"
-								className="block w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-950"
-								placeholder="Your name"
-							/>
-						</div>
-
+						
 						<div className="flex items-center gap-2 text-xs text-slate-400">
 							<input
 								id="terms"

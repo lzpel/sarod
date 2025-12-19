@@ -64,7 +64,7 @@ interface AuthApi {
 		指定メールアドレスにそのメールアドレスが正しいことを確認するリンクを送ります
 		そのリンクを踏んだ人だけがユーザー追加画面にたどり着けます
 	""")
-	@route("/email") @post email(uri: string, email: string, service_name: string): NoContentResponse | BadRequestResponse;
+	@route("/email") @post email(email: string): NoContentResponse | BadRequestResponse;
 	@doc("""
 		ユーザーを追加します
 		token_challenge: ロボットではないことの確認のためのトークン

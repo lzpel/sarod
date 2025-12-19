@@ -39,12 +39,12 @@ impl OAuth {
 			"{auth_uri}?client_id={client_id}&redirect_uri={redir}&response_type=code&scope=openid%20email%20profile&state={state}",
 			auth_uri = self.auth_uri,
 			client_id = self.client_id,
-			redir = url_encode(&redirect_uri),
-			state = url_encode(&format!("{redirect_uri}{}{start_time}", Self::SEPRATOR)),
+			redir = encode::url_encode(&redirect_uri),
+			state = encode::url_encode(&format!("{redirect_uri}{}{start_time}", Self::SEPRATOR)),
 		)
 	}
 	pub async fn callback(&self, state: &str, code: &str) -> Result<TokenResponse, String> {
-		let state_decoded = url_decode(state).map_err(|e| e.to_string())?;
+		let state_decoded = encode::url_decode(state).map_err(|e| e.to_string())?;
 		let redirect_uri = state_decoded
 			.split(Self::SEPRATOR)
 			.next()
@@ -177,16 +177,24 @@ pub fn timestamp() -> usize {
 	duration_since_epoch.as_secs() as usize
 }
 
-pub mod email{
-	pub fn validate_email(email: &str, accept_language: &str, service_name: &str, verification_url: &str, expiration_time: &str, support_email: &str) -> (String, String) {
-		let is_ja=accept_language.contains("ja");
-		let subject=if is_ja {
+pub mod email {
+	pub fn validate_email(
+		email: &str,
+		accept_language: &str,
+		service_name: &str,
+		verification_url: &str,
+		expiration_time: &str,
+		support_email: &str,
+	) -> (String, String) {
+		let is_ja = accept_language.contains("ja");
+		let subject = if is_ja {
 			format!("ユーザー登録のご案内")
-		}else{
+		} else {
 			format!("User registration confirmation")
 		};
-		let body=if is_ja {
-			format!("{service_name} をご利用いただきありがとうございます。
+		let body = if is_ja {
+			format!(
+				"{service_name} をご利用いただきありがとうございます。
 
 以下のリンクをクリックすると、ユーザー登録画面に遷移します。
 
@@ -206,9 +214,11 @@ pub mod email{
 
 ――――――――――
 {service_name}
-――――――――――")
-		}else{
-			format!("Thank you for your interest in {service_name}.
+――――――――――"
+			)
+		} else {
+			format!(
+				"Thank you for your interest in {service_name}.
 
 Please click the link below to verify your email address and sign up.
 
@@ -229,15 +239,15 @@ and we hope you enjoy using {service_name}.
 
 ――――――――――
 {service_name}
-――――――――――")
+――――――――――"
+			)
 		};
 		return (subject, body);
 	}
 }
 
-pub mod encode{
+pub mod encode {
 	pub fn url_encode(input: &str) -> String {
-		
 		let mut out = String::new();
 		for b in input.bytes() {
 			let c = b as char;
@@ -280,7 +290,6 @@ pub mod encode{
 
 		Ok(out)
 	}
-	
 
 	fn hex_digit(n: u8) -> char {
 		match n {
@@ -298,7 +307,6 @@ pub mod encode{
 		}
 	}
 }
-
 
 //test
 #[cfg(test)]

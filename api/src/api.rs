@@ -96,11 +96,22 @@ impl out::ApiInterface for Api {
 			.map_err(|v| v.to_string())
 	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
-		todo!("認証メールアドレスを作成する途中");
-		let language=req.request.headers().get(axum::http::header::ACCEPT_LANGUAGE).and_then(|v| v.to_str().ok()).unwrap_or_default();
-		let (subtitle, body) = auth::email::validate_email(&req.body.email, language, "Plant Mimamori", "https://mimamori.surfic.com", "2025-12-20", "support@surfic.com");
-		match ngoni::ses::send_email("info@surfic.com", &req.body.email, "Plant Mimamori", body).await {
-			Ok(_) => return out::AuthapiEmailResponse::Status200(r.signed_jwt()),
+		let language = req
+			.request
+			.headers()
+			.get(axum::http::header::ACCEPT_LANGUAGE)
+			.and_then(|v| v.to_str().ok())
+			.unwrap_or_default();
+		let (subject, body) = auth::email::validate_email(
+			&req.body.email,
+			language,
+			"Plant Mimamori",
+			"https://mimamori.surfic.com",
+			"2025-12-20",
+			"support@surfic.com",
+		);
+		match ngoni::ses::send_email("info@surfic.com", &req.body.email, &subject, &body).await {
+			Ok(_) => return out::AuthapiEmailResponse::Status204,
 			Err(e) => return out::AuthapiEmailResponse::Status400(e.to_string()),
 		}
 	}
