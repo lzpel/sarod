@@ -167,6 +167,7 @@ pub trait TokenJwtGenerator {
 	}
 }
 
+// 現在時刻をUnix時間に変換する
 pub fn timestamp() -> usize {
 	let now = std::time::SystemTime::now();
 	let duration_since_epoch = now
@@ -176,66 +177,128 @@ pub fn timestamp() -> usize {
 	duration_since_epoch.as_secs() as usize
 }
 
-pub fn url_encode(input: &str) -> String {
-	let mut out = String::new();
-	for b in input.bytes() {
-		let c = b as char;
-		// RFC 3986 unreserved: ALPHA / DIGIT / "-" / "." / "_" / "~"
-		if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '~' {
-			out.push(c);
-		} else {
-			out.push('%');
-			out.push(hex_digit(b >> 4));
-			out.push(hex_digit(b & 0x0F));
+pub mod email{
+	pub fn validate_email(email: &str, accept_language: &str, service_name: &str, verification_url: &str, expiration_time: &str, support_email: &str) -> (String, String) {
+		let is_ja=accept_language.contains("ja");
+		let subject=if is_ja {
+			format!("ユーザー登録のご案内")
+		}else{
+			format!("User registration confirmation")
+		};
+		let body=if is_ja {
+			format!("{service_name} をご利用いただきありがとうございます。
+
+以下のリンクをクリックすると、ユーザー登録画面に遷移します。
+
+▼ メールアドレスを確認する
+{verification_url}
+
+※ このリンクの有効期限は {expiration_time} です。
+
+もしこのメールに心当たりがない場合は、
+どなたかが誤ってこのメールアドレスを入力した可能性があります。
+その場合は、このメールを破棄してください。操作は不要です。
+
+ご不明な点がありましたら、以下のメールアドレスにお問い合わせください。
+{support_email}
+
+今後とも {service_name} をよろしくお願いいたします。
+
+――――――――――
+{service_name}
+――――――――――")
+		}else{
+			format!("Thank you for your interest in {service_name}.
+
+Please click the link below to verify your email address and sign up.
+
+▼ Verify your email address
+{verification_url}
+
+This link will expire in {expiration_time}.
+
+If you did not request to create an account,
+it is possible that someone entered your email address by mistake.
+In that case, you can safely ignore this email—no action is required.
+
+If you have any questions, please contact us via the following email:
+{support_email}
+
+Thank you,
+and we hope you enjoy using {service_name}.
+
+――――――――――
+{service_name}
+――――――――――")
+		};
+		return (subject, body);
+	}
+}
+
+pub mod encode{
+	pub fn url_encode(input: &str) -> String {
+		
+		let mut out = String::new();
+		for b in input.bytes() {
+			let c = b as char;
+			// RFC 3986 unreserved: ALPHA / DIGIT / "-" / "." / "_" / "~"
+			if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '~' {
+				out.push(c);
+			} else {
+				out.push('%');
+				out.push(hex_digit(b >> 4));
+				out.push(hex_digit(b & 0x0F));
+			}
 		}
+		out
 	}
-	out
-}
 
-fn hex_digit(n: u8) -> char {
-	match n {
-		0..=9 => (b'0' + n) as char,
-		10..=15 => (b'A' + (n - 10)) as char,
-		_ => unreachable!(),
-	}
-}
+	pub fn url_decode(input: &str) -> Result<String, &'static str> {
+		let mut out = String::new();
+		let bytes = input.as_bytes();
+		let mut i = 0;
 
-pub fn url_decode(input: &str) -> Result<String, &'static str> {
-	let mut out = String::new();
-	let bytes = input.as_bytes();
-	let mut i = 0;
+		while i < bytes.len() {
+			match bytes[i] {
+				b'%' => {
+					if i + 2 >= bytes.len() {
+						return Err("incomplete percent-encoding");
+					}
 
-	while i < bytes.len() {
-		match bytes[i] {
-			b'%' => {
-				if i + 2 >= bytes.len() {
-					return Err("incomplete percent-encoding");
+					let hi = from_hex_digit(bytes[i + 1]).ok_or("invalid hex")?;
+					let lo = from_hex_digit(bytes[i + 2]).ok_or("invalid hex")?;
+
+					out.push(((hi << 4) | lo) as char);
+					i += 3;
 				}
-
-				let hi = from_hex_digit(bytes[i + 1]).ok_or("invalid hex")?;
-				let lo = from_hex_digit(bytes[i + 2]).ok_or("invalid hex")?;
-
-				out.push(((hi << 4) | lo) as char);
-				i += 3;
-			}
-			_ => {
-				out.push(bytes[i] as char);
-				i += 1;
+				_ => {
+					out.push(bytes[i] as char);
+					i += 1;
+				}
 			}
 		}
-	}
 
-	Ok(out)
+		Ok(out)
+	}
+	
+
+	fn hex_digit(n: u8) -> char {
+		match n {
+			0..=9 => (b'0' + n) as char,
+			10..=15 => (b'A' + (n - 10)) as char,
+			_ => unreachable!(),
+		}
+	}
+	fn from_hex_digit(c: u8) -> Option<u8> {
+		match c {
+			b'0'..=b'9' => Some(c - b'0'),
+			b'a'..=b'f' => Some(c - b'a' + 10),
+			b'A'..=b'F' => Some(c - b'A' + 10),
+			_ => None,
+		}
+	}
 }
 
-fn from_hex_digit(b: u8) -> Option<u8> {
-	match b {
-		b'0'..=b'9' => Some(b - b'0'),
-		b'A'..=b'F' => Some(b - b'A' + 10),
-		b'a'..=b'f' => Some(b - b'a' + 10),
-		_ => None,
-	}
-}
 
 //test
 #[cfg(test)]

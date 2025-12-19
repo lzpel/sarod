@@ -61,14 +61,22 @@ model Subscription {
 @route("/auth")
 interface AuthApi {
 	@doc("""
-		ユーザーを追加します、認証が不要だが、メールアドレスが確認されるまでアクティベートされない
+		指定メールアドレスにそのメールアドレスが正しいことを確認するリンクを送ります
+		そのリンクを踏んだ人だけがユーザー追加画面にたどり着けます
 	""")
-	@post email(name: string, auth_email: string, auth_email_password: string): string | BadRequestResponse;
+	@route("/email") @post email(uri: string, email: string, service_name: string): NoContentResponse | BadRequestResponse;
+	@doc("""
+		ユーザーを追加します
+		token_challenge: ロボットではないことの確認のためのトークン
+		token_email: メールアドレスが正しいことを確認するためのトークン
+	""")
+	@route("/regisiter") @post register(name: string, auth_email: string, auth_email_password: string, token_challenge: string, token_email: string): User | BadRequestResponse;
 	@doc("""
 		google ログイン
 	""")
 	@route("/google") @get google(@query redirect: string): string;
 	@doc("""
+		ユーザーを追加します
 		oauth コールバック用
 	""")
 	@route("/callback_oauth") @get callback_oauth(@query code: string, @query state: string): string|BadRequestResponse;

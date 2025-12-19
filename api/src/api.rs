@@ -96,14 +96,10 @@ impl out::ApiInterface for Api {
 			.map_err(|v| v.to_string())
 	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
-		let r = out::User {
-			id: Uuid::now_v7(),
-			name: req.body.name,
-			auth_email: req.body.auth_email,
-			auth_email_password: req.body.auth_email_password,
-			..Default::default()
-		};
-		match r.push(&self.db).await {
+		todo!("認証メールアドレスを作成する途中");
+		let language=req.request.headers().get(axum::http::header::ACCEPT_LANGUAGE).and_then(|v| v.to_str().ok()).unwrap_or_default();
+		let (subtitle, body) = auth::email::validate_email(&req.body.email, language, "Plant Mimamori", "https://mimamori.surfic.com", "2025-12-20", "support@surfic.com");
+		match ngoni::ses::send_email("info@surfic.com", &req.body.email, "Plant Mimamori", body).await {
 			Ok(_) => return out::AuthapiEmailResponse::Status200(r.signed_jwt()),
 			Err(e) => return out::AuthapiEmailResponse::Status400(e.to_string()),
 		}
