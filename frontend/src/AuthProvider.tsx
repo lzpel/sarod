@@ -6,7 +6,6 @@ import { User, userApiUserGet } from "@/src/out";
 
 //基本情報
 type IAM =	User
-const WhoAmI = async () => (await userApiUserGet()).data
 
 //認証コンテキスト
 type AuthContextValue = {
@@ -22,14 +21,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 	const [loading, setLoading] = useState(true);
 
 	const fetchIam = async () => {
-		try {
-			setLoading(true);
-			setIam(await WhoAmI());
-		} catch (e) {
-			setIam(null);
-		} finally {
+		userApiUserGet().then((v) => {
+			setIam(v.data);
 			setLoading(false);
-		}
+		}).catch((e) => {
+			setIam(null);
+			setLoading(false);
+		})
 	};
 
 	useEffect(() => {
