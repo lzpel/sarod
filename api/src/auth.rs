@@ -162,6 +162,14 @@ pub trait TokenJwtGenerator {
 			&decoding_key,
 			&jsonwebtoken::Validation::default(),
 		)?;
+		//有効期限チェック  jsonwebtoken::decodeでもやっていると聞くが念のため
+		if let Some(v) = token_data.claims.exp {
+			if v < timestamp() {
+				return Err(jsonwebtoken::errors::Error::from(
+					jsonwebtoken::errors::ErrorKind::ExpiredSignature,
+				));
+			}
+		}
 		// 検証が成功した場合、デコードされたクレームを返す
 		Ok(token_data.claims)
 	}
@@ -178,8 +186,35 @@ pub fn timestamp() -> usize {
 }
 
 pub mod email {
-    use axum::http::HeaderMap;
-    use axum::http::HeaderValue;
+	use axum::http::HeaderMap;
+	use axum::http::HeaderValue;
+
+	use crate::auth::TokenJwtGenerator;
+	struct Email {
+		email: String,
+	}
+	impl TokenJwtGenerator for Email {
+		fn jwt(&self) -> super::TokenJwt {
+			super::TokenJwt {
+				sub: self.email.clone(),
+				exp: Some(super::timestamp() + 60 * 60),
+				..Default::default()
+			}
+		}
+		fn secret() -> &'static [u8] {
+			b"email_secret"
+		}
+	}
+	pub fn jwt_from_email(email: &str) -> String {
+		let jwt = Email {
+			email: email.to_string(),
+		};
+		jwt.signed_jwt()
+	}
+
+	pub fn jwt_into_email(jwt: &str) -> String {
+		Email::validate_jwt(jwt).unwrap().sub
+	}
 
 	pub fn validate_email(
 		header_map: &HeaderMap<HeaderValue>,

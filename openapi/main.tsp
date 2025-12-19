@@ -66,7 +66,7 @@ interface AuthApi {
 		uri: コールバック用にドメインをフロントエンドから抽出する
 		email: メールアドレス
 	""")
-	@route("/email") @post email(uri: string, email: string): NoContentResponse | BadRequestResponse;
+	@route("/email") @post email(email: string): NoContentResponse | BadRequestResponse;
 	@doc("""
 		ユーザーを追加します
 		token_challenge: ロボットではないことの確認のためのトークン

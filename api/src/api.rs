@@ -96,16 +96,13 @@ impl out::ApiInterface for Api {
 			.map_err(|v| v.to_string())
 	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
-		let language = req
-			.request
-			.headers()
-			.get(axum::http::header::ACCEPT_LANGUAGE)
-			.and_then(|v| v.to_str().ok())
-			.unwrap_or_default();
 		let (subject, body) = auth::email::validate_email(
 			&req.request.headers(),
 			"Plant Mimamori",
-			"/signup",
+			&format!(
+				"/register?token={}",
+				auth::email::jwt_from_email(&req.body.email)
+			),
 			"2025-12-20",
 			"support@surfic.com",
 		);
@@ -113,6 +110,9 @@ impl out::ApiInterface for Api {
 			Ok(_) => return out::AuthapiEmailResponse::Status204,
 			Err(e) => return out::AuthapiEmailResponse::Status400(e.to_string()),
 		}
+	}
+	async fn authapi_signup(&self, _req: out::AuthapiSignupRequest) -> out::AuthapiSignupResponse {
+		Default::default()
 	}
 	async fn authapi_google(&self, req: out::AuthapiGoogleRequest) -> out::AuthapiGoogleResponse {
 		let redirect_uri = self.google.redirect_uri(&req.redirect);
