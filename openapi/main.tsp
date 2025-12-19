@@ -63,14 +63,16 @@ interface AuthApi {
 	@doc("""
 		指定メールアドレスにそのメールアドレスが正しいことを確認するリンクを送ります
 		そのリンクを踏んだ人だけがユーザー追加画面にたどり着けます
+		uri: コールバック用にドメインをフロントエンドから抽出する
+		email: メールアドレス
 	""")
-	@route("/email") @post email(email: string): NoContentResponse | BadRequestResponse;
+	@route("/email") @post email(uri: string, email: string): NoContentResponse | BadRequestResponse;
 	@doc("""
 		ユーザーを追加します
 		token_challenge: ロボットではないことの確認のためのトークン
 		token_email: メールアドレスが正しいことを確認するためのトークン
 	""")
-	@route("/regisiter") @post register(name: string, auth_email: string, auth_email_password: string, token_challenge: string, token_email: string): User | BadRequestResponse;
+	@route("/signup") @post signup(name: string, auth_email: string, auth_email_password: string, token_challenge: string, token_email: string): User | BadRequestResponse;
 	@doc("""
 		google ログイン
 	""")

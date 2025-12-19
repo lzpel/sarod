@@ -178,14 +178,24 @@ pub fn timestamp() -> usize {
 }
 
 pub mod email {
+    use axum::http::HeaderMap;
+    use axum::http::HeaderValue;
+
 	pub fn validate_email(
-		email: &str,
-		accept_language: &str,
+		header_map: &HeaderMap<HeaderValue>,
 		service_name: &str,
-		verification_url: &str,
+		verification_url_after_host: &str,
 		expiration_time: &str,
 		support_email: &str,
 	) -> (String, String) {
+		let accept_language = header_map
+			.get(axum::http::header::ACCEPT_LANGUAGE)
+			.and_then(|v| v.to_str().ok())
+			.unwrap_or_default();
+		let host = header_map
+			.get(axum::http::header::HOST)
+			.and_then(|v| v.to_str().ok())
+			.unwrap_or_default();
 		let is_ja = accept_language.contains("ja");
 		let subject = if is_ja {
 			format!("ユーザー登録のご案内")
@@ -199,7 +209,7 @@ pub mod email {
 以下のリンクをクリックすると、ユーザー登録画面に遷移します。
 
 ▼ メールアドレスを確認する
-{verification_url}
+https://{host}{verification_url_after_host}
 
 ※ このリンクの有効期限は {expiration_time} です。
 
@@ -214,6 +224,7 @@ pub mod email {
 
 ――――――――――
 {service_name}
+https://{host}
 ――――――――――"
 			)
 		} else {
@@ -223,7 +234,7 @@ pub mod email {
 Please click the link below to verify your email address and sign up.
 
 ▼ Verify your email address
-{verification_url}
+https://{host}{verification_url_after_host}
 
 This link will expire in {expiration_time}.
 
@@ -239,6 +250,7 @@ and we hope you enjoy using {service_name}.
 
 ――――――――――
 {service_name}
+https://{host}
 ――――――――――"
 			)
 		};

@@ -103,10 +103,9 @@ impl out::ApiInterface for Api {
 			.and_then(|v| v.to_str().ok())
 			.unwrap_or_default();
 		let (subject, body) = auth::email::validate_email(
-			&req.body.email,
-			language,
+			&req.request.headers(),
 			"Plant Mimamori",
-			"https://mimamori.surfic.com",
+			"/signup",
 			"2025-12-20",
 			"support@surfic.com",
 		);
