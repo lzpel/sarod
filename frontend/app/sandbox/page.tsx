@@ -1,12 +1,9 @@
-import Container from "@/stateless_ui/Container";
-import { SideLayout } from "@/stateless_ui/SideLayout";
-
+import Button from "@/stateless_ui/Button";
+import {Home} from 'lucide-react';
 export default function page() {
 	return <>
-		<Container>
-			<SideLayout side={<></>}>
-				aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa			
-			</SideLayout>
-		</Container>
+		<Button icon={<Home />}>
+			title
+		</Button>
 	</>
 }

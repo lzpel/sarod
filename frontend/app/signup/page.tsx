@@ -1,5 +1,5 @@
 "use client"
-import Sign from "@/stateless_ui/sign";
+import Sign from "@/stateless_ui/Sign";
 import { useAuth } from "@/src/AuthProvider";
 import { Redirect } from "@/src/redirect";
 
