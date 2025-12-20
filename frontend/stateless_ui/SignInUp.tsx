@@ -76,7 +76,7 @@ export default function SignInUp(props: SignInUpProps) {
 			<div className="mb-6">
 				<form action={googleAction} method="get">
 					<button
-						type="button" // default to button if onGoogleClick is provided
+						type={props.onGoogleClick ? "button" : "submit"} // submit if no handler provided
 						onClick={props.onGoogleClick}
 						className="w-full flex items-center justify-center gap-2 rounded-md border border-divider bg-background-paper px-4 py-2 text-sm font-medium text-text-primary hover:bg-action-hover/10 transition-colors"
 					>

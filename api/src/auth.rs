@@ -186,9 +186,6 @@ pub fn timestamp() -> usize {
 }
 
 pub mod email {
-	use axum::http::HeaderMap;
-	use axum::http::HeaderValue;
-
 	use crate::auth::TokenJwtGenerator;
 	struct Email {
 		email: String,
@@ -217,21 +214,14 @@ pub mod email {
 	}
 
 	pub fn validate_email(
-		header_map: &HeaderMap<HeaderValue>,
 		service_name: &str,
-		verification_url_after_host: &str,
+		language: &str,
+		url_origin: &str,
+		url_verification: &str,
 		expiration_time: &str,
 		support_email: &str,
 	) -> (String, String) {
-		let accept_language = header_map
-			.get(axum::http::header::ACCEPT_LANGUAGE)
-			.and_then(|v| v.to_str().ok())
-			.unwrap_or_default();
-		let host = header_map
-			.get(axum::http::header::HOST)
-			.and_then(|v| v.to_str().ok())
-			.unwrap_or_default();
-		let is_ja = accept_language.contains("ja");
+		let is_ja = language.contains("ja");
 		let subject = if is_ja {
 			format!("ユーザー登録のご案内")
 		} else {
@@ -244,7 +234,7 @@ pub mod email {
 以下のリンクをクリックすると、ユーザー登録画面に遷移します。
 
 ▼ メールアドレスを確認する
-https://{host}{verification_url_after_host}
+{url_verification}
 
 ※ このリンクの有効期限は {expiration_time} です。
 
@@ -259,7 +249,7 @@ https://{host}{verification_url_after_host}
 
 ――――――――――
 {service_name}
-https://{host}
+{url_origin}
 ――――――――――"
 			)
 		} else {
@@ -269,7 +259,7 @@ https://{host}
 Please click the link below to verify your email address and sign up.
 
 ▼ Verify your email address
-https://{host}{verification_url_after_host}
+{url_verification}
 
 This link will expire in {expiration_time}.
 
@@ -285,7 +275,7 @@ and we hope you enjoy using {service_name}.
 
 ――――――――――
 {service_name}
-https://{host}
+{url_origin}
 ――――――――――"
 			)
 		};
