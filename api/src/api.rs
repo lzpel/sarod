@@ -96,13 +96,13 @@ impl out::ApiInterface for Api {
 			.map_err(|v| v.to_string())
 	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
+		let origin = origin_from_headers(&req.request.headers()).unwrap_or_default();
+		let language = language_from_headers(&req.request.headers()).unwrap_or_default();
 		let (subject, body) = auth::email::validate_email(
-			&req.request.headers(),
 			"Plant Mimamori",
-			&format!(
-				"/register?token={}",
-				auth::email::jwt_from_email(&req.body.email)
-			),
+			&language,
+			&origin,
+			&format!("{origin}/register?token={}", auth::email::jwt_from_email(&req.body.email)),
 			"2025-12-20",
 			"support@surfic.com",
 		);
@@ -230,6 +230,23 @@ impl out::ApiInterface for Api {
 			Err(e) => out::RuleapiRulePushResponse::Status400(e),
 		}
 	}
+}
+
+pub fn origin_from_headers(headers: &axum::http::HeaderMap<axum::http::HeaderValue>) -> Option<String> {
+    let host = 	headers.get(axum::http::header::HOST).and_then(|h| h.to_str().ok()).map(str::trim).filter(|s| !s.is_empty())?.to_string();
+    let hostname = host.trim_start_matches('[').split(']').next().unwrap_or(&host).split(':').next().unwrap_or(&host);
+    let scheme = match hostname {
+        "localhost" | "127.0.0.1" | "::1" => "http",
+        _ => "https",
+    };
+    Some(format!("{scheme}://{host}"))
+}
+pub fn language_from_headers(headers: &axum::http::HeaderMap<axum::http::HeaderValue>) -> Option<String> {
+	headers.get(axum::http::header::ACCEPT_LANGUAGE)
+		.and_then(|v| v.to_str().ok())
+		.map(str::trim)
+		.filter(|s| !s.is_empty())
+		.map(str::to_string)
 }
 
 impl Collection for out::User {
