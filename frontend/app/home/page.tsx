@@ -1,7 +1,7 @@
 "use client"
 import TwitterHome, { TwitterUser } from "@/stateless_ui/TwitterHome"
 import { useAuth } from "@/src/AuthProvider";
-import { Redirect } from "@/src/redirect";
+import { Redirect } from "@/src/Redirect";
 export default function page() {
 	const { iam } = useAuth();
 	if (iam) {
@@ -12,7 +12,7 @@ export default function page() {
 		}
 		return <TwitterHome user={x}>
 		</TwitterHome>
-	}else{
+	} else {
 		return <Redirect target="/" />
 	}
 }

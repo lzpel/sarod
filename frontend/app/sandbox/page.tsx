@@ -1,6 +1,7 @@
 import Button from "@/stateless_ui/Button";
 import * as FormControls from "@/stateless_ui/FormControls";
 import * as SignIn from "@/stateless_ui/SignInUp";
+import * as Message from "@/stateless_ui/Message";
 import { Home } from 'lucide-react';
 export default function page() {
 	return <>
@@ -12,6 +13,8 @@ export default function page() {
 			<FormControls.Example />
 			<hr />
 			<SignIn.Example />
+			<hr />
+			<Message.Example />
 		</div>
 	</>
 }

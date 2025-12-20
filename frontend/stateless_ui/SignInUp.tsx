@@ -27,6 +27,12 @@ type SignInUpProps = {
 
 	// Links
 	toggleLinkHref?: string;
+
+	// Custom Content (e.g. Messages)
+	children?: React.ReactNode;
+
+	// Submit handler
+	onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void;
 };
 
 /**
@@ -58,6 +64,13 @@ export default function SignInUp(props: SignInUpProps) {
 			<p className="text-sm text-text-secondary mb-6">
 				{props.description || defaultDesc}
 			</p>
+
+			{/* Custom Content (Messages, etc) */}
+			{props.children && (
+				<div className="mb-6">
+					{props.children}
+				</div>
+			)}
 
 			{/* Google Sign In/Up */}
 			<div className="mb-6">
@@ -102,7 +115,7 @@ export default function SignInUp(props: SignInUpProps) {
 			</div>
 
 			{/* Email Form */}
-			<form action={action} method={method}>
+			<form action={action} method={method} onSubmit={props.onSubmit}>
 				<div className="space-y-4">
 					<FormControl label="メールアドレス">
 						<Input
@@ -166,7 +179,11 @@ export function Example() {
 					googleAction="/auth/google"
 					action="/auth/signup"
 					toggleLinkHref="#"
-				/>
+				>
+					<div className="bg-info-main/10 border border-info-main/20 text-text-primary p-3 rounded text-sm text-center">
+						Example Message Child
+					</div>
+				</SignInUp>
 			</div>
 		</div>
 	);
