@@ -16,7 +16,7 @@
 "use client";
 
 import { useAuth } from "@/src/AuthProvider";
-import { Redirect } from "@/src/Redirect";
+import Redirect from "@/stateless_ui/Redirect";
 import SignInUp from "@/stateless_ui/SignInUp";
 import { Message } from "@/stateless_ui/Message";
 import { authApiEmail } from "@/src/out";
