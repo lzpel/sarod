@@ -76,7 +76,7 @@ interface AuthApi {
 	@doc("""
 		google ログイン
 	""")
-	@route("/google") @get google(@query redirect: string): string;
+	@route("/google") @get google(): string;
 	@doc("""
 		ユーザーを追加します
 		oauth コールバック用

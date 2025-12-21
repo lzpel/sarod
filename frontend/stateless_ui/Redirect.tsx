@@ -20,7 +20,7 @@ type RedirectProps = {
 /**
  * クライアントサイドリダイレクトを行うコンポーネント
  */
-export function Redirect(props: RedirectProps) {
+export default function Redirect(props: RedirectProps) {
 	const router = useRouter();
 
 	useEffect(() => {

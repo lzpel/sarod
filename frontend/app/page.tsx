@@ -1,6 +1,6 @@
 "use client"
 import { useAuth } from "@/src/AuthProvider";
-import { Redirect } from "@/src/Redirect";
+import Redirect from "@/stateless_ui/Redirect";
 import Profile from "@/stateless_ui/Profile";
 
 export default function Home() {
