@@ -28,11 +28,12 @@ type IconWithLabelProps = {
 /**
  * アイコンとラベルを横並びに表示するコンポーネント
  */
+
 export default function IconWithLabel(props: IconWithLabelProps) {
 	return (
 		<div
-			className={`flex items-center gap-2 ${props.onClick
-				? "cursor-pointer rounded p-1 hover:bg-action-hover/10 transition-colors"
+			className={`flex items-center justify-center gap-3 py-4 px-6 ${props.onClick
+				? "cursor-pointer rounded hover:bg-action-hover/10 transition-colors"
 				: ""
 				} ${props.className || ""}`}
 			onClick={props.onClick}
@@ -40,7 +41,7 @@ export default function IconWithLabel(props: IconWithLabelProps) {
 			<span className="text-text-secondary flex items-center justify-center">
 				{props.icon}
 			</span>
-			<span className="text-sm font-medium text-text-primary">
+			<span className="text-base font-medium text-text-primary">
 				{props.label}
 			</span>
 		</div>
