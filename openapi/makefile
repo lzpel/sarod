@@ -1,11 +1,10 @@
-generate: tspconfig
-	npx tsp info >/dev/null || $(MAKE) install
-	find -maxdepth 1 -name '*.tsp' | xargs -IX npx tsp compile X
-install: tspconfig
+generate:
+	npm install
+	echo "$${tspconfig}" > ./out.yaml
+	npm run tsp -- compile main.tsp --config ./out.yaml
+install:
 	npm install @typespec/compiler @typespec/http @typespec/openapi3
 	npm pkg set scripts.tsp="tsp"
-tspconfig:
-	echo "$${tspconfig}" > ./tspconfig.yaml
 %:
 	@echo "no target $*"
 define tspconfig
