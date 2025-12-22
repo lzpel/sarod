@@ -15,7 +15,7 @@
 
 "use client";
 
-import { useAuth } from "@/src/AuthProvider";
+import { useUser } from "@/app/Provider";
 import Redirect from "@/stateless_ui/Redirect";
 import SignInUp from "@/stateless_ui/SignInUp";
 import { Message } from "@/stateless_ui/Message";
@@ -23,11 +23,11 @@ import { authApiEmail } from "@/src/out";
 import { useState } from "react";
 
 export default function SignupPage() {
-	const { iam, loading } = useAuth();
+	const { user, loading } = useUser();
 	const [message, setMessage] = useState<React.ReactNode | null>(null);
 
 	// ログインしているなら/homeへ
-	if (iam) {
+	if (user) {
 		return <Redirect target="/home" />;
 	}
 

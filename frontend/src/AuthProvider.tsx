@@ -1,50 +1,50 @@
 // src/AuthContext.tsx
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, userApiUserGet } from "@/src/out";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-//基本情報
-type IAM =	User
-
-//認証コンテキスト
-type AuthContextValue = {
-	iam: IAM | null;
+export type AuthContextValue<User> = {
+	user: User | null;
 	loading: boolean;
 	reload: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue<unknown> | undefined>(undefined);
 
-export default function AuthProvider({ children }: { children: React.ReactNode }) {
-	const [iam, setIam] = useState<IAM | null>(null);
+export function AuthProvider<User>(props: {
+	children: React.ReactNode;
+	fetchUser: () => Promise<User>; // ← 注入
+	initialUser?: User | null;
+}) {
+	const [User, setUser] = useState<User | null>(props.initialUser ?? null);
 	const [loading, setLoading] = useState(true);
 
-	const fetchIam = async () => {
-		userApiUserGet().then((v) => {
-			setIam(v.data);
-			setLoading(false);
-		}).catch((e) => {
-			setIam(null);
-			setLoading(false);
-		})
-	};
+	const reload = useMemo(
+		() => async () => {
+			props.fetchUser().then((v) => {
+				setUser(v);
+				setLoading(false);
+			}).catch((e) => {
+				setUser(null);
+				setLoading(false);
+			})
+		},
+		[props.fetchUser]
+	);
 
 	useEffect(() => {
-		fetchIam();
-	}, []);
+		void reload();
+	}, [reload]);
 
 	return (
-		<AuthContext.Provider value={{ iam, loading, reload: fetchIam }}>
-			{children}
+		<AuthContext.Provider value={{ user: User, loading, reload } as AuthContextValue<User>}>
+			{props.children}
 		</AuthContext.Provider>
 	);
 }
 
-export function useAuth() {
+export function useAuth<User>() {
 	const ctx = useContext(AuthContext);
-	if (!ctx) {
-		throw new Error("useAuth must be used within <AuthProvider />");
-	}
-	return ctx;
+	if (!ctx) throw new Error("useAuth must be used within <AuthProvider />");
+	return ctx as AuthContextValue<User>;
 }
