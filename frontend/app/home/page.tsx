@@ -1,18 +1,12 @@
-"use client"
-import TwitterHome, { TwitterUser } from "@/stateless_ui/TwitterHome"
-import { useAuth } from "@/src/AuthProvider";
-import Redirect from "@/stateless_ui/Redirect";
+import { TabsPanel } from "@/stateless_ui/TabsWithDataKey";
+import Base from "@/app/Base";
+
 export default function page() {
-	const { iam } = useAuth();
-	if (iam) {
-		const x: TwitterUser = {
-			name: iam.name,
-			sub: iam.id,
-			picture: iam.picture,
-		}
-		return <TwitterHome user={x}>
-		</TwitterHome>
-	} else {
-		return <Redirect target="/" />
-	}
+	return <>
+		<Base>
+			<TabsPanel value="home">
+				<div key="home">home</div>
+			</TabsPanel>
+		</Base>
+	</>
 }

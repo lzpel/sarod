@@ -15,38 +15,38 @@
 
 import React, { Suspense } from 'react';
 import { useQueryState, parseAsString } from 'nuqs';
-import TabsWithDataKey from '@/stateless_ui/TabsWithDataKey';
+import TabsWithDataKey, { TabsPanel } from '@/stateless_ui/TabsWithDataKey';
 import IconWithLabel from '@/stateless_ui/IconWithLabel';
-import { Home, Trophy, Star, User } from 'lucide-react';
-import { useAuth } from '@/src/AuthProvider';
+import { Home, Trophy, Star, UserRound } from 'lucide-react';
 import Redirect from '@/stateless_ui/Redirect';
-import { User as IAM } from '@/src/out';
+import { useUser, User } from './Provider';
+import { GetDataKeyFromEvent } from '@/stateless_ui/withDataKey';
 
-export default function Base(props: {children: React.ReactNode}) {
-	const {iam, loading} = useAuth();
-	if (iam) {
+export default function Base(props: {children: React.ReactElement[]}) {
+	const { user, loading } = useUser();
+	// ① loading が最優先
+	if (loading) {
 		return <Suspense fallback={<div>Loading...</div>}>
-			<BaseContent user={iam}>{props.children}</BaseContent>
-		</Suspense>
-	} else {
-		return <Redirect target="/signin" />
+			<div />
+		</Suspense>;
 	}
+	// ② loading が終わってから user 判定
+	if (!user) return <Redirect target="/signin" />;
+	// ③ 認証済み
+	return <BaseContent user={user}>
+		{props.children}
+	</BaseContent>
 }
 
-function BaseContent(props: {children: React.ReactNode, user: IAM}) {
+function BaseContent(props: {children: React.ReactElement[], user: User}) {
 	const [page, setPage] = useQueryState('page', parseAsString.withDefault('home'));
-
-	const handleTabClick = (key: string) => {
-		setPage(key);
-	};
 
 	return (
 		<div className="flex flex-col h-screen w-full bg-background-default text-text-primary">
 			<div className="flex-none border-b border-divider">
-				<TabsWithDataKey contentSide="bottom" className="justify-center">
+				<TabsWithDataKey contentSide="bottom" className="justify-center" onClick={(e)=>setPage(GetDataKeyFromEvent(e)||page)}>
 					<div
 						key="home"
-						onClick={() => handleTabClick('home')}
 						aria-selected={page === 'home'}
 						className="flex justify-center"
 					>
@@ -54,7 +54,6 @@ function BaseContent(props: {children: React.ReactNode, user: IAM}) {
 					</div>
 					<div
 						key="ranking"
-						onClick={() => handleTabClick('ranking')}
 						aria-selected={page === 'ranking'}
 						className="flex justify-center"
 					>
@@ -62,7 +61,6 @@ function BaseContent(props: {children: React.ReactNode, user: IAM}) {
 					</div>
 					<div
 						key="star"
-						onClick={() => handleTabClick('star')}
 						aria-selected={page === 'star'}
 						className="flex justify-center"
 					>
@@ -70,17 +68,19 @@ function BaseContent(props: {children: React.ReactNode, user: IAM}) {
 					</div>
 					<div
 						key="user"
-						onClick={() => handleTabClick('user')}
 						aria-selected={page === 'user'}
 						className="flex justify-center"
 					>
-						<IconWithLabel icon={<User />} label="ユーザー" />
+						<IconWithLabel icon={<UserRound />} label="ユーザー" />
 					</div>
 				</TabsWithDataKey>
 			</div>
-			<div className="flex-1 overflow-auto">
-				{props.children}
-			</div>
+			<TabsPanel component="div" value={page} className="flex-1 overflow-auto">
+				<div key="home">home</div>
+				<div key="ranking">ranking</div>
+				<div key="star">star</div>
+				<div key="user">user</div>
+			</TabsPanel>
 		</div>
 	);
 }

@@ -55,18 +55,18 @@ export function TabsPanel<C extends React.ElementType = "div">(
 export type TabsWithDataKeyProps = {
 	children: React.ReactElement | React.ReactElement[];
 	contentSide?: 'top' | 'bottom' | 'left' | 'right';
-	className?: string;
-};
+}&Omit<React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>, 'children'>
 
 export default function TabsWithDataKey(props: TabsWithDataKeyProps) {
-	const { children, contentSide = 'bottom', className } = props;
+	const { children, contentSide = 'bottom', ...rest } = props;
 	const orientation = ['left', 'right'].includes(contentSide) ? 'vertical' : 'horizontal';
 	const isVertical = orientation === 'vertical';
 	const childrenArray = Array.isArray(children) ? children : [children];
 
 	return (
 		<div
-			className={`flex ${isVertical ? 'flex-col' : 'flex-row'} ${className || ''}`}
+			{...rest}
+			className={`flex ${isVertical ? 'flex-col' : 'flex-row'} ${rest.className || ''}`}
 			role="tablist"
 			aria-orientation={orientation}
 		>

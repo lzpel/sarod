@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/globals.css";
-import AuthProvider from "@/src/AuthProvider";
-import { NuqsAdapter } from "nuqs/adapters/react";
+import Provider from "@/app/Provider";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -22,7 +21,6 @@ export const metadata: Metadata = {
 		initialScale: 1,
 	}
 };
-
 export default function RootLayout({
 	children,
 }: Readonly<{
@@ -31,11 +29,9 @@ export default function RootLayout({
 	return (
 		<html lang="jp">
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<AuthProvider>
-					<NuqsAdapter>
-						{children}
-					</NuqsAdapter>
-				</AuthProvider>
+				<Provider>
+					{children}
+				</Provider>
 			</body>
 		</html>
 	);

@@ -11,6 +11,7 @@
 import React from 'react';
 import { FormControl, Input } from './FormControls';
 
+// ... (existing code)
 type SignInUpProps = {
 	mode: "signin" | "signup";
 	// Actions / URLs
@@ -33,6 +34,10 @@ type SignInUpProps = {
 
 	// Submit handler
 	onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void;
+
+	// Optional: Hide password field (for Magic Link only mode)
+	// If true, password field is not shown even in signin mode
+	hidePassword?: boolean;
 };
 
 /**
@@ -40,6 +45,7 @@ type SignInUpProps = {
  */
 export default function SignInUp(props: SignInUpProps) {
 	const isSignIn = props.mode === "signin";
+	const hidePassword = props.hidePassword ?? false;
 
 	const defaultTitle = isSignIn ? "ログイン" : "アカウント作成";
 	const defaultDesc = isSignIn
@@ -126,8 +132,8 @@ export default function SignInUp(props: SignInUpProps) {
 						/>
 					</FormControl>
 
-					{/* Password field only for SignIn mode */}
-					{isSignIn && (
+					{/* Password field only for SignIn mode AND not hidden */}
+					{isSignIn && !hidePassword && (
 						<FormControl label="パスワード">
 							<Input
 								name="password"
@@ -163,12 +169,23 @@ export function Example() {
 	return (
 		<div className="grid gap-8 p-8 bg-background-default lg:grid-cols-2">
 			<div className="flex flex-col items-center justify-center gap-4">
-				<p className="text-text-primary font-bold">Mode: SignIn</p>
+				<p className="text-text-primary font-bold">Mode: SignIn (Password)</p>
 				<SignInUp
 					mode="signin"
 					googleAction="/auth/google"
 					action="/auth/login"
 					toggleLinkHref="#"
+				/>
+			</div>
+
+			<div className="flex flex-col items-center justify-center gap-4">
+				<p className="text-text-primary font-bold">Mode: SignIn (Magic Link / No Password)</p>
+				<SignInUp
+					mode="signin"
+					googleAction="/auth/google"
+					action="/auth/login"
+					toggleLinkHref="#"
+					hidePassword={true}
 				/>
 			</div>
 
