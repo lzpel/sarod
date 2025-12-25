@@ -37,14 +37,14 @@ type IconWithLabelProps<C extends React.ElementType> =
 export default function IconWithLabel<C extends React.ElementType = "div">(
 	props: IconWithLabelProps<C>
 ) {
-	const { component, icon, label, "aria-selected": ariaSelected, disabled, ...rest } = props;
+	const { component, icon, label, "aria-selected": ariaSelected, disabled, className, ...rest } = props;
 	const Component = (component || "div") as React.ElementType;
 	return (
 		<Component
 			className={`
-				flex items-center justify-center gap-3 py-4 px-6
+				flex items-center w-full justify-center gap-3 py-4 px-6
 				${disabled ? "" : "cursor-pointer rounded hover:bg-action-hover/10 transition-colors"}
-				${rest.className ?? ""}
+				${className ?? ""}
 			`}
 			{...rest}
 		>
@@ -85,7 +85,7 @@ export function Example() {
 						component="button"
 						icon={<Bell size={20} />}
 						label="ボタンとして機能"
-						className="w-full border border-divider justify-start"
+						className="border border-divider"
 					/>
 				</div>
 
@@ -93,11 +93,9 @@ export function Example() {
 				<div>
 					<div className="text-xs text-text-secondary mb-1">Disabled</div>
 					<IconWithLabel
-						component="button"
 						disabled
 						icon={<Settings size={20} />}
 						label="無効化"
-						className="w-full border border-divider opacity-50 justify-start"
 					/>
 				</div>
 
