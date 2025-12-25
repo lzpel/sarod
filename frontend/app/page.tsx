@@ -1,16 +1,15 @@
 "use client"
-import { useAuth } from "@/src/AuthProvider";
 import Redirect from "@/stateless_ui/Redirect";
 import Profile from "@/stateless_ui/Profile";
+import { useUser } from "@/app/Provider";
 
-export default function Home() {
-	const { iam } = useAuth();
-	if (iam) {
+export default function Page() {
+	const { user, loading } = useUser();
+	if (loading) {
+		return <div>Loading...</div>;
+	}
+	if (user) {
 		return <Redirect target="/home" />
 	}
-	return (
-		<>
-			<Profile />
-		</>
-	);
+	return <Profile />;
 }

@@ -1,8 +1,7 @@
 use crate::auth::TokenJwtGenerator;
 use crate::auth::{self, OAuth};
-use crate::collection::Collection;
+use crate::collection::{Collection, OrderBy};
 use crate::out;
-use axum::RequestExt;
 use firestore;
 use uuid::Uuid;
 
@@ -139,7 +138,7 @@ impl out::ApiInterface for Api {
 		let inner = async || -> Result<_, String> {
 			let a = self.google.callback(&req.state, &req.code).await?;
 			let b = a.jwt()?;
-			let c = out::User::query(&self.db, "auth_google", &b.sub).await?;
+			let c = out::User::query(&self.db, Some(|q: crate::collection::FilterBuilder| q.field("auth_google").eq(&b.sub)), None, None, None).await?;
 			let w = if let Some(d) = c.first() {
 				d.clone()
 			} else {
@@ -205,36 +204,10 @@ impl out::ApiInterface for Api {
 			Err(e) => out::UserapiUserGetResponse::Status400(e),
 		}
 	}
-	async fn ruleapi_rule_list(
-		&self,
-		req: out::RuleapiRuleListRequest,
-	) -> out::RuleapiRuleListResponse {
-		let Some(v) = Self::jwt_get(req) else {
-			return out::RuleapiRuleListResponse::Status403;
-		};
-		match out::Rule::query(&self.db, "id_root", &v.sub).await {
-			Ok(u) => out::RuleapiRuleListResponse::Status200(u),
-			Err(e) => out::RuleapiRuleListResponse::Status400(e),
-		}
-	}
-	async fn ruleapi_rule_push(
-		&self,
-		req: out::RuleapiRulePushRequest,
-	) -> out::RuleapiRulePushResponse {
-		let Some(v) = Self::jwt_get(&req) else {
-			return out::RuleapiRulePushResponse::Status403;
-		};
-		let inner = async |r: &out::Rule| -> Result<out::Rule, String> {
-			let r = out::Rule {
-				id: Uuid::now_v7(),
-				id_root: v.sub.try_into().unwrap(),
-				..r.clone()
-			};
-			r.push(&self.db).await.map(|_| r)
-		};
-		match inner(&req.body.rule).await {
-			Ok(u) => out::RuleapiRulePushResponse::Status200(u),
-			Err(e) => out::RuleapiRulePushResponse::Status400(e),
+	async fn videoapi_home(&self, req: out::VideoapiHomeRequest) -> out::VideoapiHomeResponse {
+		match out::Video::query(&self.db, None, Some(OrderBy::Desc("value_trending")), Some(firestore::firestore_value::FirestoreValue(req.cursor)), None).await {
+			Ok(u) => out::VideoapiHomeResponse::Status200(u),
+			Err(e) => out::VideoapiHomeResponse::Status400(e),
 		}
 	}
 }
@@ -368,9 +341,9 @@ impl Collection for out::User {
 		self.id.to_string()
 	}
 }
-impl Collection for out::Rule {
+impl Collection for out::Video {
 	fn collection_name() -> &'static str {
-		"rule"
+		"page"
 	}
 	fn document_id(&self) -> String {
 		self.id.to_string()
