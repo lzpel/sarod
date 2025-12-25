@@ -12,6 +12,12 @@ export function GetDataKeyFromEvent(e: React.UIEvent){
 	const elWithId = target.closest<HTMLElement>("[data-key]");
 	return elWithId?.dataset.key;
 }
+
+// クリック情報を付加する高階コンポーネント
+export function WithDataKey<P>(props: {children: React.ReactElement<P>, dataKey: string}): React.ReactElement<P & WithDataKeyType>{
+	return withDataKey(props.children, props.dataKey)
+}
+
 // クリック情報を付加する
 export function withDataKey<P>(
 	element: React.ReactElement<P>,
@@ -29,8 +35,4 @@ export function withDataKey<P>(
 			...added
 		}
 	);
-}
-
-export default function WithDataKey<P>(props: {children: React.ReactElement<P>, dataKey: string}): React.ReactElement<P & WithDataKeyType>{
-	return withDataKey(props.children, props.dataKey)
 }
