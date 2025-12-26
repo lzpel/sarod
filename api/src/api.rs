@@ -1,6 +1,6 @@
 use crate::auth::TokenJwtGenerator;
 use crate::auth::{self, OAuth};
-use crate::collection::{Collection, OrderBy};
+use crate::collection::{Collection};
 use crate::out;
 use firestore;
 use uuid::Uuid;

@@ -5,13 +5,6 @@ import path from 'path';
 export class AwscdkStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
-
-		// ローカルの lambda/Dockerfile からイメージ Lambda を作る
-		const api = docker_image_function(
-			this,
-			"api",
-			path.join(__dirname, '../../api'),
-		)
 		// 動画やユーザープロフィール画像の保存用
 		const bucket = new cdk.aws_s3.Bucket(this, 'uuid');
 
@@ -21,6 +14,18 @@ export class AwscdkStack extends cdk.Stack {
 			retentionPeriod: cdk.Duration.days(4),
 		});
 
+		// ローカルの lambda/Dockerfile からイメージ Lambda を作る
+		const api = docker_image_function(
+			this,
+			"api",
+			path.join(__dirname, '../../api'),
+			{
+				environment: {
+					SQS_URL: queue.queueUrl,
+				}
+			}
+		)
+		
 		//権限設定
 		queue.grantSendMessages(api.lambda);
 		queue.grantConsumeMessages(api.lambda);
