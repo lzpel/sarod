@@ -32,11 +32,16 @@ model Page {
 	id_node: UUID;//ルール
 	name: string;//名前
 	content: string;//名前
-	value_trending: int32;
-	value_popularity: int32;
-	score_day: int32;
-	score_week: int32;
-	score_month: int32;
+	count_view: Count;
+	count_star: Count;
+	count_text: Count;
+}
+
+model Count {
+	log: int32[];//30days
+	day: int32;
+	week: int32;
+	month: int32;
 }
 
 model Video is Page;

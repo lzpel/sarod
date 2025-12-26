@@ -3,6 +3,9 @@ use firestore::{
 	FirestoreValue, select_filter_builder::FirestoreQueryFilterBuilder,
 };
 pub type FilterBuilder = FirestoreQueryFilterBuilder;
+pub fn none_filter(q: FilterBuilder) -> Option<FirestoreQueryFilter> {
+	None
+}
 pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync + Send {
 	fn collection_name() -> &'static str;
 	fn document_id(&self) -> String;
@@ -32,17 +35,16 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 	}
 	async fn query<'a>(
 		db: &firestore::FirestoreDb,
-		filters: Option<impl Fn(FirestoreQueryFilterBuilder) -> Option<FirestoreQueryFilter>>,
+		filters: impl Fn(FirestoreQueryFilterBuilder) -> Option<FirestoreQueryFilter>,
 		order: Option<OrderBy>,
 		cursor: Option<FirestoreValue>,
 		limit: Option<u32>,
 	) -> Result<Vec<Self>, String> {
-		let builder: _ = db.fluent().select().from(Self::collection_name());
-		let builder = if let Some(filters) = filters {
-			builder.filter(filters)
-		} else {
-			builder
-		};
+		let builder: _ = db
+			.fluent()
+			.select()
+			.from(Self::collection_name())
+			.filter(filters);
 		let builder = if let Some(order) = order {
 			//特定のフィールドを基準にクエリを並べ替えると、order-by フィールドが存在するドキュメントのみを返すことができます。
 			//id基準でソートするならuuidの一意性を前提に、衝突を考えなくていい、そしてid基準以外でソートするときにページ境界で抜けがあってもいいことにする

@@ -138,7 +138,14 @@ impl out::ApiInterface for Api {
 		let inner = async || -> Result<_, String> {
 			let a = self.google.callback(&req.state, &req.code).await?;
 			let b = a.jwt()?;
-			let c = out::User::query(&self.db, Some(|q: crate::collection::FilterBuilder| q.field("auth_google").eq(&b.sub)), None, None, None).await?;
+			let c = out::User::query(
+				&self.db,
+				|q: crate::collection::FilterBuilder| q.field("auth_google").eq(&b.sub),
+				None,
+				None,
+				None,
+			)
+			.await?;
 			let w = if let Some(d) = c.first() {
 				d.clone()
 			} else {
@@ -204,8 +211,8 @@ impl out::ApiInterface for Api {
 			Err(e) => out::UserapiUserGetResponse::Status400(e),
 		}
 	}
-	async fn videoapi_home(&self, req: out::VideoapiHomeRequest) -> out::VideoapiHomeResponse {
-		match out::Video::query(&self.db, None, Some(OrderBy::Desc("value_trending")), Some(firestore::firestore_value::FirestoreValue(req.cursor)), None).await {
+	async fn videoapi_home(&self, _req: out::VideoapiHomeRequest) -> out::VideoapiHomeResponse {
+		match out::Video::query(&self.db, crate::collection::none_filter, None, None, None).await {
 			Ok(u) => out::VideoapiHomeResponse::Status200(u),
 			Err(e) => out::VideoapiHomeResponse::Status400(e),
 		}
