@@ -10,11 +10,21 @@ export class AwscdkStack extends cdk.Stack {
 		const api = docker_image_function(
 			this,
 			"api",
-			path.join(__dirname, '../../lambda'),
+			path.join(__dirname, '../../api'),
 		)
-
+		// 動画やユーザープロフィール画像の保存用
 		const bucket = new cdk.aws_s3.Bucket(this, 'uuid');
-		bucket.grantReadWrite(api.lambda)//s3読み書き権限設定
+
+		// 再生イベント保管用
+		const queue = new cdk.aws_sqs.Queue(this, 'events', {
+			visibilityTimeout: cdk.Duration.seconds(60),
+			retentionPeriod: cdk.Duration.days(4),
+		});
+
+		//権限設定
+		queue.grantSendMessages(api.lambda);
+		queue.grantConsumeMessages(api.lambda);
+		bucket.grantReadWrite(api.lambda)
 
 		//キャッシュを提供するコンテンツ配信ネットワーク(CDN)(Cloud Front)を用意
 		const distribution = new cdk.aws_cloudfront.Distribution(this, "cloudfront", {

@@ -14,16 +14,26 @@
 //以上の共通ルールは保持、共通ルール以降に内容を実装して
 "use client";
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import TabsWithDataKey from '@/stateless_ui/TabsWithDataKey';
 import IconWithLabel from '@/stateless_ui/IconWithLabel';
 import { Home, Trophy, Star, UserRound } from 'lucide-react';
-import { WithDataKey, GetDataKeyFromEvent } from '@/stateless_ui/withDataKey';
+import { useUser } from '@/app/Provider';
+import Redirect from '@/stateless_ui/Redirect';
 
 export default function Layout(props: { children: React.ReactNode }) {
 	const pathname = usePathname();
-
+	const { user, loading } = useUser();
+	// ① loading が最優先
+	if (loading) {
+		return <Suspense fallback={<div>Loading...</div>}>
+			<div />
+		</Suspense>;
+	}
+	// ② loading が終わってから user 判定
+	if (!user) return <Redirect target="/signin" />;
+	// ③ 認証済み
 	return (
 		<div className="flex flex-col h-screen w-full bg-background-default text-text-primary">
 			<div className="flex-none border-b border-divider">
