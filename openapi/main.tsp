@@ -26,19 +26,25 @@ model User {
 	is_active: boolean;
 }
 
-model Rule {
-	id: UUID;//一意
-	id_root: UUID;//親
-	name: string;//名前
-	script: string;//名前
-}
-
 model Page {
 	id: UUID;//一意
 	id_root: UUID;//親
 	id_node: UUID;//ルール
+	name: string;//名前
 	content: string;//名前
+	count_view: Count;
+	count_star: Count;
+	count_text: Count;
 }
+
+model Count {
+	log: int32[];//30days
+	day: int32;
+	week: int32;
+	month: int32;
+}
+
+model Video is Page;
 
 // 課金系
 
@@ -99,18 +105,22 @@ interface UserApi {
 		ユーザー情報を取得します、認証が必要
 	""")
 	@get user_get(): User | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		ユーザーの名前やプロフィールの設定を行う、認証が必要
+	""")
+	@post user_set(user: User): User | ForbiddenResponse | BadRequestResponse;
 }
 
-// 一個一個のルールを編集する
+// 一個一個の動画を編集する
 @useAuth(BearerAuth)
-@route("/rule")
-interface RuleApi {
+@route("/video")
+interface VideoApi {
 	@doc("""
-		ルール一覧を返します
+		ホーム画面用の動画一覧を返します、認証が必要
 	""")
-	@get rule_list(): Rule[] | ForbiddenResponse | BadRequestResponse;
+	@route("/home") @get home(cursor: UUID, limit: int32): Video[] | ForbiddenResponse | BadRequestResponse;
 	@doc("""
-		ルールを追加/更新します
+		動画を追加/更新します、認証が必要
 	""")
-	@post rule_push(rule: Rule): Rule | ForbiddenResponse | BadRequestResponse;
+	@post push(video: Video): Video | ForbiddenResponse | BadRequestResponse;
 }

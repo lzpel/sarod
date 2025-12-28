@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/globals.css";
 import Provider from "@/app/Provider";
@@ -16,11 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: "Sarod",
 	description: "AI agent for everyone",
-	viewport: {
-		width: "device-width",
-		initialScale: 1,
-	}
 };
+
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	// 例: viewportFit: "cover", などもここ
+};
+
 export default function RootLayout({
 	children,
 }: Readonly<{
@@ -31,7 +34,6 @@ export default function RootLayout({
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				<Provider>
 					{children}
-					a
 				</Provider>
 			</body>
 		</html>
