@@ -26,32 +26,31 @@ import { SlideSwitch } from './SlideSwitch';;
  * annual=false => 月額 (Monthly)
  */
 export function AnnualSwitch(props: Pick<ComponentProps<typeof SlideSwitch>, "value" | "onChange" | "className"> & { saveLabel: ReactNode }) {
-	return (
-		<div className={`flex items-center justify-center gap-4 p-4 ${props.className || ''}`}>
-			<SlideSwitch
-				NodeTrue={
-					<div className="flex items-center gap-2">
-						<span>年間プラン</span>
-					</div>
-				}
-				NodeFalse={
-					<span>月額</span>
-				}
-				// annual=true (年額) をTrueとする
-				leftIsTrue={true} // 右(年額)をActiveにしたい場合、SlideSwitchの仕様を確認
-				// SlideSwitchの仕様:
-				// leftIsTrue = true:  value=true -> Left
-				// leftIsTrue = false: value=true -> Right
-				// ここでは「年額」を右側に配置し、annual=trueの時に右側(年額)をActiveにしたいので、
-				// leftIsTrue=false (value=true is Right) で、NodeTrue(年額)をPassする
-				// NodeTrue: 年額, NodeFalse: 月額, leftIsTrue: false
-				// value=true (annual) -> Right (NodeTrue: 年額) Active
-				// value=false (!annual) -> Left (NodeFalse: 月額) Active
+	return (<SlideSwitch
+		NodeTrue={
+			<div className="flex items-center gap-2">
+				<span>年額</span>
+				{props.saveLabel}
+			</div>
+		}
+		NodeFalse={
+			<span>月額</span>
+		}
+		// annual=true (年額) をTrueとする
+		leftIsTrue={true} // 右(年額)をActiveにしたい場合、SlideSwitchの仕様を確認
+		// SlideSwitchの仕様:
+		// leftIsTrue = true:  value=true -> Left
+		// leftIsTrue = false: value=true -> Right
+		// ここでは「年額」を右側に配置し、annual=trueの時に右側(年額)をActiveにしたいので、
+		// leftIsTrue=false (value=true is Right) で、NodeTrue(年額)をPassする
+		// NodeTrue: 年額, NodeFalse: 月額, leftIsTrue: false
+		// value=true (annual) -> Right (NodeTrue: 年額) Active
+		// value=false (!annual) -> Left (NodeFalse: 月額) Active
 
-				value={props.value}
-				onChange={props.onChange}
-			/>
-		</div>
+		value={props.value}
+		onChange={props.onChange}
+		className='my-5 w-100'
+	/>
 	);
 }
 
@@ -109,8 +108,8 @@ export function Plan(props: {
 					className={`
                         w-full py-3 px-4 rounded-full font-bold text-sm transition-colors
                         ${props.recommended
-							? 'bg-text-primary text-background-default hover:bg-text-secondary'
-							: 'bg-action-selected text-text-primary hover:bg-action-focus'
+							? 'bg-primary-main text-primary-contrast hover:bg-primary-dark'
+							: 'bg-background-paper text-text-primary border border-divider hover:bg-action-hover'
 						}
                     `}
 					onClick={props.onButtonClick}
@@ -138,9 +137,9 @@ export function Price(props: { children?: ReactNode }) {
 	);
 }
 
-export type PlanSubscriptionProps = 
-Omit<ComponentProps<typeof Plan>, "annual" | "price" | "buttonLabel" | "onButtonClick"> &
-{ value: string, priceAnnual: ReactNode, priceMonthly: ReactNode };
+export type PlanSubscriptionProps =
+	Omit<ComponentProps<typeof Plan>, "annual" | "price" | "buttonLabel" | "onButtonClick"> &
+	{ value: string, priceAnnual: ReactNode, priceMonthly: ReactNode };
 /**
  * Example component
  */
@@ -152,7 +151,7 @@ export function Subscription(props: {
 	plans: PlanSubscriptionProps[],
 	onButtonClick?: React.MouseEventHandler<HTMLButtonElement>,
 }) {
-	const [isAnnual, setIsAnnual] = useState(false);
+	const [isAnnual, setIsAnnual] = useState(true);
 
 	return (
 		<div className="min-h-screen bg-background-default p-8 flex flex-col items-center">
@@ -165,7 +164,7 @@ export function Subscription(props: {
 
 			<AnnualSwitch value={isAnnual} onChange={setIsAnnual} saveLabel={<Badge>SAVE 12%</Badge>} />
 
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full items-start">
+			<div className="flex flex-col md:flex-row justify-center gap-6 max-w-5xl w-full items-start flex-wrap">
 				{
 					props.plans.map((plan, index) => {
 						const { priceAnnual, priceMonthly, ...rest } = plan;
@@ -194,7 +193,7 @@ export function Example() {
 		<Subscription
 			title="Upgrade to Premium"
 			description="コンテンツ制作を楽しみ、収益化するための最適なプランをお選びください。"
-			saveLabel="SAVE 12%"
+			saveLabel="-12%"
 			value="free"
 			plans={[
 				{

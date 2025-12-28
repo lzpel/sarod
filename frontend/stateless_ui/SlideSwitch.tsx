@@ -33,7 +33,7 @@ export function SlideSwitch(props: SlideSwitchProps) {
 
 	return (
 		<div
-			className={`relative inline-flex items-center bg-action-disabledBackground rounded-lg p-1 cursor-pointer select-none transition-colors ${props.className || ''}`}
+			className={`relative inline-flex items-center bg-action-disabledBackground rounded-lg cursor-pointer select-none transition-colors ${props.className || ''}`}
 			onClick={() => props.onChange(!props.value)}
 		>
 			{/* Slider Background */}
