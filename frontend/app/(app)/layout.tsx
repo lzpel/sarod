@@ -15,12 +15,13 @@
 "use client";
 
 import React, { Suspense } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import TabsWithDataKey from '@/stateless_ui/TabsWithDataKey';
 import IconWithLabel from '@/stateless_ui/IconWithLabel';
 import { Home, Trophy, Star, UserRound } from 'lucide-react';
 import { useUser } from '@/app/Provider';
 import Redirect from '@/stateless_ui/Redirect';
+import Link from 'next/link';
 
 export default function Layout(props: { children: React.ReactNode }) {
 	const pathname = usePathname();
@@ -44,38 +45,42 @@ export default function Layout(props: { children: React.ReactNode }) {
 					<IconWithLabel
 						key="home"
 						icon={<Home size={28} />}
-						component='a'
 						label="ホーム"
 						className="px-6 py-3"
 						href="/home"
 						aria-selected={pathname.startsWith('/home')}
+						component={Link}
+						prefetch/* Link高速化 */
 					/>
 					<IconWithLabel
 						key="ranking"
 						icon={<Trophy size={28} />}
-						component='a'
 						label="ランキング"
 						className="px-6 py-3"
 						href="/ranking"
 						aria-selected={pathname.startsWith('/ranking')}
+						component={Link}
+						prefetch/* Link高速化 */
 					/>
 					<IconWithLabel
 						key="star"
 						icon={<Star size={28} />}
-						component='a'
 						label="課題"
 						className="px-6 py-3"
 						href="/star"
 						aria-selected={pathname.startsWith('/star')}
+						component={Link}
+						prefetch/* Link高速化 */
 					/>
 					<IconWithLabel
 						key="user"
 						icon={<UserRound size={28} />}
-						component='a'
 						label="ユーザー"
 						className="px-6 py-3"
 						href="/user"
 						aria-selected={pathname.startsWith('/user')}
+						component={Link}
+						prefetch/* Link高速化 */
 					/>
 				</TabsWithDataKey>
 			</div>
