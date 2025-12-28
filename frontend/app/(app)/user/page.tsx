@@ -11,114 +11,125 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { Trophy, Film, History, Star } from 'lucide-react';
-import TabsWithDataKey from '@/stateless_ui/TabsWithDataKey';
+import { Trophy, Film, History, Star, LogOut, BadgeJapaneseYen, BadgeDollarSign } from 'lucide-react';
+import TabsWithDataKey, { TabsPanel } from '@/stateless_ui/TabsWithDataKey';
 import IconWithLabel from '@/stateless_ui/IconWithLabel';
 import Thumbnail from '@/stateless_ui/Thumbnail';
+import { authApiOut } from '@/src/out';
+import { GetDataKeyFromEvent } from '@/stateless_ui/withDataKey';
+import { useQueryState } from 'nuqs';
+import { Subscription } from '@/stateless_ui/Subscription';
 
-// ダミーデータ
-const DUMMY_VIDEOS = {
-	ranking: Array.from({ length: 8 }).map((_, i) => ({
-		id: `rank-${i}`,
-		imageSrc: `https://picsum.photos/seed/rank${i}/320/180`,
-		title: `ランキング動画タイトル ${i + 1} - 人気上昇中のコンテンツ`,
-		duration: '10:00'
-	})),
-	latest: Array.from({ length: 8 }).map((_, i) => ({
-		id: `latest-${i}`,
-		imageSrc: `https://picsum.photos/seed/latest${i}/320/180`,
-		title: `最新動画タイトル ${i + 1} - アップロードされたばかり`,
-		duration: '05:30'
-	})),
-	history: Array.from({ length: 8 }).map((_, i) => ({
-		id: `hist-${i}`,
-		imageSrc: `https://picsum.photos/seed/hist${i}/320/180`,
-		title: `視聴履歴動画タイトル ${i + 1} - 以前視聴した動画`,
-		duration: '15:20'
-	})),
-	likes: Array.from({ length: 8 }).map((_, i) => ({
-		id: `like-${i}`,
-		imageSrc: `https://picsum.photos/seed/like${i}/320/180`,
-		title: `高評価動画タイトル ${i + 1} - お気に入りのコンテンツ`,
-		duration: '08:45'
-	})),
-};
 
 export default function Page() {
-	const [activeTab, setActiveTab] = useState<keyof typeof DUMMY_VIDEOS>('ranking');
-
-	const handleTabClick = (key: string) => {
-		if (key in DUMMY_VIDEOS) {
-			setActiveTab(key as keyof typeof DUMMY_VIDEOS);
-		}
-	};
-
-	const videos = DUMMY_VIDEOS[activeTab] || [];
+	const userTabDefault="ranking";
+	const [userTab, setUserTab] = useQueryState('user_tab', {
+		defaultValue: userTabDefault,
+	});
 
 	return (
 		<div className="flex h-full w-full bg-background-default">
 			{/* 左カラム: タブ */}
-			<div className="flex-none w-64 border-r border-divider h-full bg-background-paper p-4">
+			<div className="flex-none w-64 border-r border-divider h-full bg-background-paper">
 				<TabsWithDataKey
 					contentSide="right"
 					className="h-full bg-transparent"
+					onClick={(e: React.MouseEvent) => setUserTab(GetDataKeyFromEvent(e) ?? userTabDefault)}
 				>
 					<IconWithLabel
 						key="ranking"
 						icon={<Trophy size={24} />}
 						label="ランキング"
-						aria-selected={activeTab === 'ranking'}
-						onClick={() => handleTabClick('ranking')}
-						className="justify-start px-4"
+						aria-selected={userTab === 'ranking'}
+						className="justify-start"
 					/>
 					<IconWithLabel
 						key="latest"
 						icon={<Film size={24} />}
 						label="最新動画"
-						aria-selected={activeTab === 'latest'}
-						onClick={() => handleTabClick('latest')}
-						className="justify-start px-4"
+						aria-selected={userTab === 'latest'}
+						className="justify-start"
 					/>
 					<IconWithLabel
 						key="history"
 						icon={<History size={24} />}
 						label="視聴履歴"
-						aria-selected={activeTab === 'history'}
-						onClick={() => handleTabClick('history')}
-						className="justify-start px-4"
+						aria-selected={userTab === 'history'}
+						className="justify-start"
 					/>
 					<IconWithLabel
 						key="likes"
 						icon={<Star size={24} />}
 						label="高評価"
-						aria-selected={activeTab === 'likes'}
-						onClick={() => handleTabClick('likes')}
-						className="justify-start px-4"
+						aria-selected={userTab === 'likes'}
+						className="justify-start"
+					/>
+					<IconWithLabel
+						key="subscription"
+						icon={<CurrencyIcon size={24} />}
+						label="無制限版"
+						aria-selected={userTab === 'subscription'}
+						className="justify-start"
+					/>
+					<IconWithLabel
+						key="logout"
+						icon={<LogOut size={24} />}
+						label="ログアウト"
+						onClick={() => authApiOut().then(() =>  window.location.reload())}
+						className="justify-start"
 					/>
 				</TabsWithDataKey>
 			</div>
 
 			{/* 右カラム: コンテンツ */}
-			<div className="flex-1 overflow-auto p-6">
-				<h2 className="text-2xl font-bold text-text-primary mb-6">
-					{activeTab === 'ranking' && 'ランキング'}
-					{activeTab === 'latest' && '最新動画'}
-					{activeTab === 'history' && '視聴履歴'}
-					{activeTab === 'likes' && '高評価'}
-				</h2>
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-					{videos.map((video) => (
-						<Thumbnail
-							key={video.id}
-							imageSrc={video.imageSrc}
-							title={video.title}
-							duration={video.duration}
-							className="w-full max-w-none"
-						/>
-					))}
-				</div>
-			</div>
+			<TabsPanel className="flex-1 overflow-auto p-6" value={userTab}>
+				<Subscription key="subscription"
+					title="Upgrade to Premium"
+					description="コンテンツ制作を楽しみ、収益化するための最適なプランをお選びください。"
+					saveLabel="SAVE 12%"
+					value="free"
+					plans={[
+						{
+							value: "free",
+							title: "Free",
+							priceAnnual: 0,
+							priceMonthly: 0,
+							currency: "yen",
+							features: [
+								"無料プラン",
+								"月額無料",
+								"年額無料",
+								"動画のアップロード制限あり",
+								"オリジナルステッカー制限あり"
+							]
+						},
+						{
+							value: "unlimited",
+							title: "Unlimited",
+							priceAnnual: 980,
+							priceMonthly: 980,
+							currency: "yen",
+							features: [
+								"Unlimitedプラン",
+								"月額980円",
+								"年額980円",
+								"動画のアップロード制限なし",
+								"オリジナルステッカー制限なし"
+							]
+						}
+					]}
+				/>	
+			</TabsPanel>
 		</div>
 	);
+}
+
+function CurrencyIcon(props:  React.ComponentProps<typeof BadgeDollarSign>) {
+	if (typeof navigator !== "undefined") {
+		const lang = navigator.language.toLowerCase();
+		if (lang.startsWith("ja")) {
+		return <BadgeJapaneseYen {...props} />;
+		}
+	}
+	return <BadgeDollarSign {...props} />;
 }
