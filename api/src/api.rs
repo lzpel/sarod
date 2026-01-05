@@ -1,6 +1,6 @@
 use crate::auth::TokenJwtGenerator;
 use crate::auth::{self, OAuth};
-use crate::collection::{Collection};
+use crate::collection::Collection;
 use crate::out;
 use firestore;
 use uuid::Uuid;
@@ -96,7 +96,7 @@ impl out::ApiInterface for Api {
 			.map_err(|v| v.to_string())
 	}
 	async fn authapi_email(&self, req: out::AuthapiEmailRequest) -> out::AuthapiEmailResponse {
-		let origin = origin_from_request(&req.request).unwrap_or_default();
+		let origin = out::origin_from_request(&req.request).unwrap_or_default();
 		let language = language_from_headers(&req.request.headers()).unwrap_or_default();
 		let (subject, body) = auth::email::validate_email(
 			"Plant Mimamori",
@@ -118,7 +118,7 @@ impl out::ApiInterface for Api {
 		Default::default()
 	}
 	async fn authapi_google(&self, req: out::AuthapiGoogleRequest) -> out::AuthapiGoogleResponse {
-		let base_redirect_url = origin_from_request(&req.request).unwrap_or_default();
+		let base_redirect_url = out::origin_from_request(&req.request).unwrap_or_default();
 		let redirect_uri = self
 			.google
 			.redirect_uri(&format!("{base_redirect_url}/api/auth/callback_oauth"));
@@ -217,116 +217,6 @@ impl out::ApiInterface for Api {
 			Err(e) => out::VideoapiHomeResponse::Status400(e),
 		}
 	}
-}
-
-//requestからhttps://example.comのようなオリジンを取得する
-pub fn origin_from_request<B>(req: &axum::http::Request<B>) -> Option<String> {
-	fn first_csv(s: &str) -> &str {
-		s.split(',').next().unwrap_or(s).trim()
-	}
-	fn unquote(s: &str) -> &str {
-		let s = s.trim();
-		if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
-			&s[1..s.len() - 1]
-		} else {
-			s
-		}
-	}
-	fn guess_scheme(host: &str) -> &'static str {
-		let hostname = host
-			.trim_start_matches('[')
-			.split(']')
-			.next()
-			.unwrap_or(host)
-			.split(':')
-			.next()
-			.unwrap_or(host);
-		match hostname {
-			"localhost" | "127.0.0.1" | "::1" => "http",
-			_ => "https",
-		}
-	}
-	fn mk_origin(proto: Option<String>, host: String) -> String {
-		let proto = proto.unwrap_or_else(|| guess_scheme(&host).to_string());
-		format!("{proto}://{host}")
-	}
-
-	let headers = req.headers();
-
-	// 0) まず URI の authority（絶対URIが来るケース）を見られる
-	//    ここで host:port が取れれば host は確定できる
-	if let Some(auth) = req.uri().authority() {
-		let host = auth.as_str().to_string();
-		// scheme は Request だけだと確定しないので、Forwarded / XFP を後で見る設計でも良いが、
-		// ここでは「protoが無ければ推測」で返す。
-		return Some(mk_origin(None, host));
-	}
-
-	// 1) Forwarded (RFC 7239)
-	if let Some(raw) = headers
-		.get(axum::http::header::FORWARDED)
-		.and_then(|v| v.to_str().ok())
-	{
-		let first = first_csv(raw);
-		let mut proto: Option<String> = None;
-		let mut host: Option<String> = None;
-
-		for part in first.split(';') {
-			let mut it = part.trim().splitn(2, '=');
-			let k = it.next().unwrap_or("").trim().to_ascii_lowercase();
-			let v = unquote(it.next().unwrap_or(""));
-
-			match k.as_str() {
-				"proto" if !v.is_empty() => proto = Some(v.to_ascii_lowercase()),
-				"host" if !v.is_empty() => host = Some(v.to_string()),
-				_ => {}
-			}
-		}
-
-		if let Some(host) = host {
-			return Some(mk_origin(proto, host));
-		}
-	}
-
-	// 2) X-Forwarded-*
-	if let Some(mut host) = headers
-		.get("x-forwarded-host")
-		.and_then(|v| v.to_str().ok())
-		.map(first_csv)
-		.filter(|s| !s.is_empty())
-		.map(str::to_string)
-	{
-		// x-forwarded-host に port が無ければ x-forwarded-port を補う（簡易）
-		if !host.contains(':') {
-			if let Some(port) = headers
-				.get("x-forwarded-port")
-				.and_then(|v| v.to_str().ok())
-				.map(str::trim)
-				.filter(|s| !s.is_empty())
-			{
-				host = format!("{host}:{port}");
-			}
-		}
-
-		let proto = headers
-			.get("x-forwarded-proto")
-			.and_then(|v| v.to_str().ok())
-			.map(first_csv)
-			.map(|s| s.to_ascii_lowercase())
-			.filter(|s| !s.is_empty());
-
-		return Some(mk_origin(proto, host));
-	}
-
-	// 3) Host fallback
-	let host = headers
-		.get(axum::http::header::HOST)
-		.and_then(|h| h.to_str().ok())
-		.map(str::trim)
-		.filter(|s| !s.is_empty())?
-		.to_string();
-
-	Some(format!("{}://{}", guess_scheme(&host), host))
 }
 
 pub fn language_from_headers(

@@ -1,8 +1,8 @@
 mod api;
 mod auth;
 mod collection;
+#[allow(dead_code, unused_variables)]
 mod out;
-#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
 	let server = api::Api::new().await.expect("cannot connect database");
