@@ -31,12 +31,10 @@ export default function SigninPage() {
 		return null;
 	}
 
-	const handleSignin = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
+	const handleSignin = async (data: { email?: string; password?: string }) => {
 		setMessage(null);
 
-		const formData = new FormData(e.currentTarget);
-		const email = formData.get("email") as string;
+		const email = data.email;
 
 		if (!email) {
 			setMessage(
@@ -69,7 +67,6 @@ export default function SigninPage() {
 		<div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background-default">
 			<SignInUp
 				mode="signin"
-				googleAction="/api/auth/google"
 				toggleLinkHref="/signup"
 				onSubmit={handleSignin}
 				hidePassword={true}

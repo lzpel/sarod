@@ -1,3 +1,3 @@
 export default function Page() {
-	return <div>ranking</div>
+	return <div>star</div>
 }
