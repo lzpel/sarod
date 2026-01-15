@@ -9,6 +9,7 @@ import * as Thumbnail from "@/stateless_ui/Thumbnail";
 import * as Premium from "@/stateless_ui/Subscription";
 import * as SlideSwitch from "@/stateless_ui/SlideSwitch";
 import * as Sushi3D from "@/stateless_ui/Sushi3D";
+import * as ImageUploadUI from "@/stateless_ui/ImageUploadUI";
 /**
  * サンドボックスページ
  */
@@ -34,6 +35,8 @@ export default function page() {
 			<Thumbnail.Example />
 			<hr />
 			<Premium.Example />
+			<hr />
+			<ImageUploadUI.Example />
 		</div>
 	</>
 }

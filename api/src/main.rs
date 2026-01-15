@@ -1,7 +1,7 @@
 mod api;
 mod auth;
 mod collection;
-#[allow(dead_code, unused_variables)]
+#[allow(dead_code, unused_variables, unused_imports, non_snake_case)]
 mod out;
 #[tokio::main]
 async fn main() {

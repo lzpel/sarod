@@ -15,7 +15,7 @@ export default function Page() {
 		return <div>Loading...</div>;
 	}
 	if (user) {
-		return <Redirect target="/home" />
+		return <Redirect target="/new" />
 	}
 	return <SushiLogin />;
 }

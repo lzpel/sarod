@@ -19,8 +19,53 @@ import Redirect from '@/stateless_ui/Redirect';
 import Link from 'next/link';
 import { SideLayout } from '@/stateless_ui/SideLayout';
 import { Sushi3D } from '@/stateless_ui/Sushi3D';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { PerspectiveCamera, Environment } from '@react-three/drei';
+
+/**
+ * カメラの注視点を原点に固定するための内部コンポーネント
+ */
+function CameraTarget() {
+	useFrame((state) => {
+		state.camera.lookAt(0, 0.6, 0); // 寿司の高さに合わせて少し上に
+	});
+	return null;
+}
+
+/**
+ * 寿司のリンクを表示する内部コンポーネント
+ */
+function SushiNavLink(props: {
+	href: string;
+	label: string;
+	toppingColor: string;
+	isActive: boolean;
+}) {
+	return (
+		<Link
+			href={props.href}
+			className={`relative block w-full h-48 transition-all overflow-hidden ${props.isActive
+				? 'bg-action-selected/10 border-2 border-primary-main rounded-2xl'
+				: 'hover:bg-action-hover/5 border-2 border-transparent rounded-2xl'
+				}`}
+		>
+			<div className="absolute inset-0 pointer-events-none">
+				<Canvas shadows>
+					<PerspectiveCamera makeDefault position={[0, 1.8, 3]} fov={40} />
+					<CameraTarget />
+					<ambientLight intensity={0.7} />
+					<Environment preset="city" />
+					<Sushi3D toppingColor={props.toppingColor} scale={1.2} rotation={[0.4, 0.8, 0]} />
+				</Canvas>
+			</div>
+			<div className="relative z-10 flex items-end justify-center h-full p-2">
+				<span className={`text-sm font-bold px-2 py-0.5 rounded-full bg-background-paper/60 backdrop-blur-sm ${props.isActive ? 'text-primary-main' : 'text-text-primary'}`}>
+					{props.label}
+				</span>
+			</div>
+		</Link>
+	);
+}
 
 export default function Layout(props: { children: React.ReactNode }) {
 	const pathname = usePathname();
@@ -70,45 +115,19 @@ export default function Layout(props: { children: React.ReactNode }) {
 
 			{/* 2列目以降: スクロール可能エリア */}
 			<div className="flex-1 overflow-y-auto space-y-3 pr-1">
-				<Link
+				<SushiNavLink
 					href="/sushi?uuid=A"
-					className={`block w-full transition-all ${pathname === '/sushi' && uuid === 'A'
-						? 'bg-action-selected/10 border-2 border-primary-main rounded-2xl'
-						: 'hover:bg-action-hover/5 border-2 border-transparent rounded-2xl'
-						}`}
-				>
-					<div className="flex flex-col items-center p-4">
-						<div className="w-24 h-24">
-							<Canvas shadows>
-								<PerspectiveCamera makeDefault position={[0, 1.5, 3]} fov={40} />
-								<ambientLight intensity={0.7} />
-								<Environment preset="city" />
-								<Sushi3D toppingColor="#ff4500" scale={1.2} rotation={[0.4, 0.8, 0]} />
-							</Canvas>
-						</div>
-						<span className={`text-sm mt-1 font-bold ${pathname === '/sushi' && uuid === 'A' ? 'text-primary-main' : 'text-text-primary'}`}>寿司A</span>
-					</div>
-				</Link>
+					label="寿司A"
+					toppingColor="#ff4500"
+					isActive={pathname === '/sushi' && uuid === 'A'}
+				/>
 
-				<Link
+				<SushiNavLink
 					href="/sushi?uuid=B"
-					className={`block w-full transition-all ${pathname === '/sushi' && uuid === 'B'
-						? 'bg-action-selected/10 border-2 border-primary-main rounded-2xl'
-						: 'hover:bg-action-hover/5 border-2 border-transparent rounded-2xl'
-						}`}
-				>
-					<div className="flex flex-col items-center p-4">
-						<div className="w-24 h-24">
-							<Canvas shadows>
-								<PerspectiveCamera makeDefault position={[0, 1.5, 3]} fov={40} />
-								<ambientLight intensity={0.7} />
-								<Environment preset="city" />
-								<Sushi3D toppingColor="#ff8c69" scale={1.2} rotation={[0.4, 0.8, 0]} />
-							</Canvas>
-						</div>
-						<span className={`text-sm mt-1 font-bold ${pathname === '/sushi' && uuid === 'B' ? 'text-primary-main' : 'text-text-primary'}`}>寿司B</span>
-					</div>
-				</Link>
+					label="寿司B"
+					toppingColor="#ff8c69"
+					isActive={pathname === '/sushi' && uuid === 'B'}
+				/>
 
 				{/* デザイン確認用のプレースホルダー */}
 				<div className="h-64 flex items-center justify-center text-text-secondary/20 border-2 border-dashed border-divider rounded-2xl italic">

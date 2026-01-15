@@ -8,9 +8,14 @@ use uuid::Uuid;
 pub struct Api {
 	google: auth::OAuth,
 	db: firestore::FirestoreDb,
+	s3_temp: ngoni::s3::S3Storage,
 }
 impl Api {
 	pub async fn new() -> Result<Self, String> {
+		let storage = match std::env::var("S3_TEMP") {
+			Ok(v) => v,
+			Err(_) => "surfic-storage".to_string(),
+		};
 		Ok(Self {
 			google: OAuth::load(
 				"secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json",
@@ -23,6 +28,7 @@ impl Api {
 			)
 			.await
 			.map_err(|v| v.to_string())?,
+			s3_temp: ngoni::s3::S3Storage::new(&storage).await,
 		})
 	}
 	pub fn jwt_get(
@@ -113,9 +119,6 @@ impl out::ApiInterface for Api {
 			Ok(_) => return out::AuthapiEmailResponse::Status204,
 			Err(e) => return out::AuthapiEmailResponse::Status400(e.to_string()),
 		}
-	}
-	async fn authapi_signup(&self, _req: out::AuthapiSignupRequest) -> out::AuthapiSignupResponse {
-		Default::default()
 	}
 	async fn authapi_google(&self, req: out::AuthapiGoogleRequest) -> out::AuthapiGoogleResponse {
 		let base_redirect_url = out::origin_from_request(&req.request).unwrap_or_default();
@@ -211,10 +214,18 @@ impl out::ApiInterface for Api {
 			Err(e) => out::UserapiUserGetResponse::Status400(e),
 		}
 	}
-	async fn videoapi_home(&self, _req: out::VideoapiHomeRequest) -> out::VideoapiHomeResponse {
-		match out::Video::query(&self.db, crate::collection::none_filter, None, None, None).await {
-			Ok(u) => out::VideoapiHomeResponse::Status200(u),
-			Err(e) => out::VideoapiHomeResponse::Status400(e),
+	async fn pageapi_upload(&self, req: out::PageapiUploadRequest) -> out::PageapiUploadResponse {
+		// 指定されたファイル名と有効期限で署名付きURLを生成します
+		// s3のcors設定でallowed originに送信元を入れないとエラーになります
+		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
+		let path = format!("{}_{}", uuid::Uuid::now_v7(), req.fileName);
+		match self
+			.s3_temp
+			.presign_write_url(&path, expires)
+			.await
+		{
+			Ok(url) => out::PageapiUploadResponse::Status200([path, url].to_vec()),
+			Err(e) => out::PageapiUploadResponse::Status400(e.to_string()),
 		}
 	}
 }
@@ -238,7 +249,7 @@ impl Collection for out::User {
 		self.id.to_string()
 	}
 }
-impl Collection for out::Video {
+impl Collection for out::Page {
 	fn collection_name() -> &'static str {
 		"page"
 	}

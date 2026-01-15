@@ -29,22 +29,14 @@ model User {
 model Page {
 	id: UUID;//一意
 	id_root: UUID;//親
-	id_node: UUID;//ルール
 	name: string;//名前
 	content: string;//名前
-	count_view: Count;
-	count_star: Count;
-	count_text: Count;
+	path_model: string;
+	path_image: string[];
+	view_image: string[];
+	script: string;
+	progress: int32;// -100-1 進行中 0 完了 1+ エラー
 }
-
-model Count {
-	log: int32[];//30days
-	day: int32;
-	week: int32;
-	month: int32;
-}
-
-model Video is Page;
 
 // 課金系
 
@@ -73,12 +65,6 @@ interface AuthApi {
 		email: メールアドレス
 	""")
 	@route("/email") @post email(email: string): NoContentResponse | BadRequestResponse;
-	@doc("""
-		ユーザーを追加します
-		token_challenge: ロボットではないことの確認のためのトークン
-		token_email: メールアドレスが正しいことを確認するためのトークン
-	""")
-	@route("/signup") @post signup(name: string, auth_email: string, auth_email_password: string, token_challenge: string, token_email: string): User | BadRequestResponse;
 	@doc("""
 		google ログイン
 	""")
@@ -113,14 +99,22 @@ interface UserApi {
 
 // 一個一個の動画を編集する
 @useAuth(BearerAuth)
-@route("/video")
-interface VideoApi {
+@route("/page")
+interface PageApi {
 	@doc("""
-		ホーム画面用の動画一覧を返します、認証が必要
+		大容量ファイルを一次的な領域にアップロードするためのurlを返します
 	""")
-	@route("/home") @get home(cursor: UUID, limit: int32): Video[] | ForbiddenResponse | BadRequestResponse;
+	@route("/upload") @post upload(@query fileName: string, @query expiresIn?: int32): string[] | BadRequestResponse;
 	@doc("""
 		動画を追加/更新します、認証が必要
 	""")
-	@post push(video: Video): Video | ForbiddenResponse | BadRequestResponse;
+	@post push(
+		path_image: string[],
+		view_image: string[],
+		script: string,
+	): Page | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		ホーム画面用の動画一覧を返します、認証が必要
+	""")
+	@get get(): Page[] | ForbiddenResponse | BadRequestResponse;
 }

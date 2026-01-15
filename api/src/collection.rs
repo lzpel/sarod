@@ -3,7 +3,8 @@ use firestore::{
 	FirestoreValue, select_filter_builder::FirestoreQueryFilterBuilder,
 };
 pub type FilterBuilder = FirestoreQueryFilterBuilder;
-pub fn none_filter(q: FilterBuilder) -> Option<FirestoreQueryFilter> {
+#[allow(unused)]
+pub fn none_filter(_q: FilterBuilder) -> Option<FirestoreQueryFilter> {
 	None
 }
 pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync + Send {
