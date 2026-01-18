@@ -6,13 +6,8 @@ export class AwscdkStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
 		// 動画やユーザープロフィール画像の保存用
-		const bucket = new cdk.aws_s3.Bucket(this, 'uuid');
-
-		// 再生イベント保管用
-		const queue = new cdk.aws_sqs.Queue(this, 'events', {
-			visibilityTimeout: cdk.Duration.seconds(60),
-			retentionPeriod: cdk.Duration.days(4),
-		});
+		const bucket_main = new cdk.aws_s3.Bucket(this, 'main');
+		const bucket_temp = new cdk.aws_s3.Bucket(this, 'temp');
 
 		// ローカルの lambda/Dockerfile からイメージ Lambda を作る
 		const api = docker_image_function(
@@ -21,15 +16,15 @@ export class AwscdkStack extends cdk.Stack {
 			path.join(__dirname, '../../api'),
 			{
 				environment: {
-					SQS_URL: queue.queueUrl,
+					BUCKET_MAIN: bucket_main.bucketName,
+					BUCKET_TEMP: bucket_temp.bucketName,
 				}
 			}
 		)
 		
 		//権限設定
-		queue.grantSendMessages(api.lambda);
-		queue.grantConsumeMessages(api.lambda);
-		bucket.grantReadWrite(api.lambda)
+		bucket_main.grantReadWrite(api.lambda)
+		bucket_temp.grantReadWrite(api.lambda)
 
 		//キャッシュを提供するコンテンツ配信ネットワーク(CDN)(Cloud Front)を用意
 		const distribution = new cdk.aws_cloudfront.Distribution(this, "cloudfront", {
@@ -42,8 +37,12 @@ export class AwscdkStack extends cdk.Stack {
 				originRequestPolicy: cdk.aws_cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
 			},
 			additionalBehaviors: {
-				"/s/*": {
-					origin: new cdk.aws_cloudfront_origins.S3Origin(bucket),
+				"/m/*": {
+					origin: new cdk.aws_cloudfront_origins.S3Origin(bucket_main),
+					viewerProtocolPolicy: cdk.aws_cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+				},
+				"/t/*": {
+					origin: new cdk.aws_cloudfront_origins.S3Origin(bucket_temp),
 					viewerProtocolPolicy: cdk.aws_cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
 				}
 			},

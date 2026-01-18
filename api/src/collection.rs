@@ -1,15 +1,26 @@
 use firestore::{
-	FirestoreQueryCursor, FirestoreQueryDirection, FirestoreQueryFilter, FirestoreQueryOrder,
-	FirestoreValue, select_filter_builder::FirestoreQueryFilterBuilder,
+	FirestoreQueryDirection, FirestoreQueryFilter, FirestoreQueryOrder, FirestoreValue,
+	select_filter_builder::FirestoreQueryFilterBuilder,
 };
+/// クエリフィルターを構築するためのビルダーの型エイリアス
 pub type FilterBuilder = FirestoreQueryFilterBuilder;
 #[allow(unused)]
+/// フィルターを適用しない場合に使用するヘルパー関数
+///
+/// * `_q`: フィルタービルダー（未使用）
 pub fn none_filter(_q: FilterBuilder) -> Option<FirestoreQueryFilter> {
 	None
 }
+/// Firestoreのコレクション操作を定義するトレイト
 pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync + Send {
+	/// コレクション名を返す
 	fn collection_name() -> &'static str;
+	/// ドキュメントのユニークなIDを返す
 	fn document_id(&self) -> String;
+	/// 指定されたIDのドキュメントを取得する
+	///
+	/// * `db`: Firestore データベースインスタンス
+	/// * `document_id`: 取得対象のドキュメントID
 	async fn get(db: &firestore::FirestoreDb, document_id: &str) -> Result<Self, String> {
 		let v: Option<Self> = db
 			.fluent()
@@ -24,6 +35,9 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			None => Err("not found".to_string()),
 		}
 	}
+	/// ドキュメントを保存（または更新）する
+	///
+	/// * `db`: Firestore データベースインスタンス
 	async fn push(&self, db: &firestore::FirestoreDb) -> Result<(), String> {
 		db.fluent()
 			.insert()
@@ -34,6 +48,13 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			.await
 			.map_err(|v| v.to_string())
 	}
+	/// クエリを実行してドキュメントの一覧を取得する
+	///
+	/// * `db`: Firestore データベースインスタンス
+	/// * `filters`: 検索条件を指定する関数クロージャ
+	/// * `order`: ソート順（オプション）
+	/// * `cursor`: ページネーション用のカーソル（オプション、現在は実装で直接使用されていない）
+	/// * `limit`: 取得件数の上限（オプション、未指定時はデフォルト100件）
 	async fn query<'a>(
 		db: &firestore::FirestoreDb,
 		filters: impl Fn(FirestoreQueryFilterBuilder) -> Option<FirestoreQueryFilter>,
@@ -54,7 +75,7 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			builder
 		};
 		let builder = if let Some(cursor) = cursor {
-			builder.start_at(FirestoreQueryCursor::AfterValue([cursor].into()))
+			builder.start_at(firestore::FirestoreQueryCursor::AfterValue([cursor].into()))
 		} else {
 			builder
 		};
@@ -68,6 +89,10 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 		let output: Vec<Self> = builder.obj().query().await.map_err(|v| v.to_string())?;
 		Ok(output)
 	}
+	/// 指定されたIDのドキュメントを削除する
+	///
+	/// * `db`: Firestore データベースインスタンス
+	/// * `document_id`: 削除対象のドキュメントID
 	async fn pop(db: &firestore::FirestoreDb, document_id: &str) -> Result<(), String> {
 		db.fluent()
 			.delete()
@@ -79,8 +104,11 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 	}
 }
 
+/// クエリのソート順を定義する
 pub enum OrderBy {
+	/// 昇順 (フィールド名)
 	Asc(&'static str),
+	/// 降順 (フィールド名)
 	Desc(&'static str),
 }
 

@@ -1,7 +1,7 @@
 use crate::auth::TokenJwtGenerator;
 use crate::auth::{self, OAuth};
-use crate::collection::Collection;
-use crate::out;
+use crate::collection::{Collection, OrderBy};
+use crate::out::{self, Page};
 use firestore;
 use uuid::Uuid;
 
@@ -9,13 +9,10 @@ pub struct Api {
 	google: auth::OAuth,
 	db: firestore::FirestoreDb,
 	s3_temp: ngoni::s3::S3Storage,
+	s3_main: ngoni::s3::S3Storage,
 }
 impl Api {
 	pub async fn new() -> Result<Self, String> {
-		let storage = match std::env::var("S3_TEMP") {
-			Ok(v) => v,
-			Err(_) => "surfic-storage".to_string(),
-		};
 		Ok(Self {
 			google: OAuth::load(
 				"secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json",
@@ -28,7 +25,8 @@ impl Api {
 			)
 			.await
 			.map_err(|v| v.to_string())?,
-			s3_temp: ngoni::s3::S3Storage::new(&storage).await,
+			s3_temp: ngoni::s3::S3Storage::new(&std::env::var("S3_TEMP").unwrap_or("surfic-storage".to_string())).await,
+			s3_main: ngoni::s3::S3Storage::new(&std::env::var("S3_MAIN").unwrap_or("surfic-storage".to_string())).await,
 		})
 	}
 	pub fn jwt_get(
@@ -226,6 +224,53 @@ impl out::ApiInterface for Api {
 		{
 			Ok(url) => out::PageapiUploadResponse::Status200([path, url].to_vec()),
 			Err(e) => out::PageapiUploadResponse::Status400(e.to_string()),
+		}
+	}
+	async fn pageapi_push(
+			&self,
+			req: out::PageapiPushRequest,
+		) -> out::PageapiPushResponse {
+		let err=out::PageapiPushResponse::Status400("invalid image".to_string());
+		// view_imageとpath_imageのサイズが等しいこと
+		if req.body.path_image.len() != req.body.view_image.len() {
+			return err;
+		}
+		for (i,j) in req.body.path_image.iter().zip(req.body.view_image.iter()) {
+			let v = self.s3_temp.head(i).await;
+			if let Ok(v) = v {
+				if v.content_length < 1024*1024*10 && ["front", "back", "left", "right", "top", "bottom", "side"].iter().any(|v| v == j) {
+					continue;
+				}
+			}
+			return err;
+		}
+		let uuid=Uuid::now_v7();
+		let path_image_new:Vec<String>=req.body.view_image.iter().map(|v| format!("{}/{}", uuid, v)).collect();
+		// コピー
+		for (i,j) in req.body.path_image.iter().zip(path_image_new.iter()) {
+			if let Ok(_) = self.s3_main.copy(Some(&self.s3_temp.bucket), i, j).await {
+				continue;
+			}
+			return err;
+		}
+		let page = Page {
+			id: uuid,
+			view_image: req.body.view_image.clone(),
+			path_image: path_image_new,
+			..Default::default()
+		};
+		return match page.push(&self.db).await {
+			Ok(_) => out::PageapiPushResponse::Status200(Default::default()),
+			Err(e) => out::PageapiPushResponse::Status400(e.to_string()),
+		}
+	}
+	async fn pageapi_get(
+			&self,
+			_req: out::PageapiGetRequest,
+		) -> out::PageapiGetResponse {
+		match Page::query(&self.db, |q: crate::collection::FilterBuilder| q.field("progress").less_than_or_equal(0), Some(OrderBy::Asc("id")), None, Some(10)).await {
+			Ok(v) => out::PageapiGetResponse::Status200(v),
+			Err(e) => out::PageapiGetResponse::Status400(format!("{:?}", e)),
 		}
 	}
 }
