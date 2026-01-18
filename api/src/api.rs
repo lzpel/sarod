@@ -25,8 +25,16 @@ impl Api {
 			)
 			.await
 			.map_err(|v| v.to_string())?,
-			s3_temp: ngoni::s3::S3Storage::new(&std::env::var("S3_TEMP").unwrap_or("surfic-storage".to_string())).await,
-			s3_main: ngoni::s3::S3Storage::new(&std::env::var("S3_MAIN").unwrap_or("surfic-storage".to_string())).await,
+			s3_temp: ngoni::s3::S3Storage::new(
+				&std::env::var("S3_TEMP")
+					.unwrap_or("sarodstack-temp3a4f7567-qbdbrpfmwtb6".to_string()),
+			)
+			.await,
+			s3_main: ngoni::s3::S3Storage::new(
+				&std::env::var("S3_MAIN")
+					.unwrap_or("sarodstack-main7ad10839-yb9blus9myx7".to_string()),
+			)
+			.await,
 		})
 	}
 	pub fn jwt_get(
@@ -217,37 +225,39 @@ impl out::ApiInterface for Api {
 		// s3のcors設定でallowed originに送信元を入れないとエラーになります
 		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
 		let path = format!("{}_{}", uuid::Uuid::now_v7(), req.fileName);
-		match self
-			.s3_temp
-			.presign_write_url(&path, expires)
-			.await
-		{
+		match self.s3_temp.presign_write_url(&path, expires).await {
 			Ok(url) => out::PageapiUploadResponse::Status200([path, url].to_vec()),
 			Err(e) => out::PageapiUploadResponse::Status400(e.to_string()),
 		}
 	}
-	async fn pageapi_push(
-			&self,
-			req: out::PageapiPushRequest,
-		) -> out::PageapiPushResponse {
-		let err=out::PageapiPushResponse::Status400("invalid image".to_string());
+	async fn pageapi_push(&self, req: out::PageapiPushRequest) -> out::PageapiPushResponse {
+		let err = out::PageapiPushResponse::Status400("invalid image".to_string());
 		// view_imageとpath_imageのサイズが等しいこと
 		if req.body.path_image.len() != req.body.view_image.len() {
 			return err;
 		}
-		for (i,j) in req.body.path_image.iter().zip(req.body.view_image.iter()) {
+		for (i, j) in req.body.path_image.iter().zip(req.body.view_image.iter()) {
 			let v = self.s3_temp.head(i).await;
 			if let Ok(v) = v {
-				if v.content_length < 1024*1024*10 && ["front", "back", "left", "right", "top", "bottom", "side"].iter().any(|v| v == j) {
+				if v.content_length < 1024 * 1024 * 10
+					&& ["front", "back", "left", "right", "top", "bottom", "side"]
+						.iter()
+						.any(|v| v == j)
+				{
 					continue;
 				}
 			}
 			return err;
 		}
-		let uuid=Uuid::now_v7();
-		let path_image_new:Vec<String>=req.body.view_image.iter().map(|v| format!("{}/{}", uuid, v)).collect();
+		let uuid = Uuid::now_v7();
+		let path_image_new: Vec<String> = req
+			.body
+			.view_image
+			.iter()
+			.map(|v| format!("{}/{}", uuid, v))
+			.collect();
 		// コピー
-		for (i,j) in req.body.path_image.iter().zip(path_image_new.iter()) {
+		for (i, j) in req.body.path_image.iter().zip(path_image_new.iter()) {
 			if let Ok(_) = self.s3_main.copy(Some(&self.s3_temp.bucket), i, j).await {
 				continue;
 			}
@@ -257,18 +267,26 @@ impl out::ApiInterface for Api {
 			id: uuid,
 			view_image: req.body.view_image.clone(),
 			path_image: path_image_new,
+			progress: 0,
 			..Default::default()
 		};
 		return match page.push(&self.db).await {
 			Ok(_) => out::PageapiPushResponse::Status200(Default::default()),
-			Err(e) => out::PageapiPushResponse::Status400(e.to_string()),
-		}
+			Err(e) => out::PageapiPushResponse::Status400(format!("{:?}", e)),
+		};
 	}
-	async fn pageapi_get(
-			&self,
-			_req: out::PageapiGetRequest,
-		) -> out::PageapiGetResponse {
-		match Page::query(&self.db, |q: crate::collection::FilterBuilder| q.field("progress").less_than_or_equal(0), Some(OrderBy::Asc("id")), None, Some(10)).await {
+	async fn pageapi_get(&self, _req: out::PageapiGetRequest) -> out::PageapiGetResponse {
+		// q.field("progress").lessthan0を指定するならOrderByにprogressを設定するしかないという制約があるので0か否かに限定した。
+		// どちらにせよインデックスの作成が必要
+		match Page::query(
+			&self.db,
+			|q: crate::collection::FilterBuilder| q.field("progress").equal(0),
+			Some(OrderBy::Asc("id")),
+			None,
+			Some(10),
+		)
+		.await
+		{
 			Ok(v) => out::PageapiGetResponse::Status200(v),
 			Err(e) => out::PageapiGetResponse::Status400(format!("{:?}", e)),
 		}
