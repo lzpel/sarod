@@ -3,8 +3,6 @@ import React from "react";
 import * as FormControls from "@/stateless_ui/FormControls";
 import * as SignIn from "@/stateless_ui/SignInUp";
 import * as Message from "@/stateless_ui/Message";
-import * as IconWithLabel from "@/stateless_ui/IconWithLabel";
-import * as Tabs from "@/stateless_ui/TabsWithDataKey";
 import * as Thumbnail from "@/stateless_ui/Thumbnail";
 import * as Premium from "@/stateless_ui/Subscription";
 import * as SlideSwitch from "@/stateless_ui/SlideSwitch";
@@ -27,10 +25,6 @@ export default function page() {
 			<SignIn.Example />
 			<hr />
 			<Message.Example />
-			<hr />
-			<IconWithLabel.Example />
-			<hr />
-			<Tabs.Example />
 			<hr />
 			<Thumbnail.Example />
 			<hr />

@@ -20,37 +20,59 @@ import { ThreeElements } from "@react-three/fiber";
 export type Sushi3DProps = ThreeElements["group"] & {
 	/** 寿司のネタの色（デフォルトはサーモンピンク） */
 	toppingColor?: string;
+	/** 任意のモデルを表示する場合のモデルパス */
+	model?: string;
 };
+
+import { useGLTF } from "@react-three/drei";
+
+/**
+ * 外部モデルを表示する内部コンポーネント
+ */
+function ExternalModel(props: { url: string; } & Omit<ThreeElements["primitive"], "object">) {
+	const { url, ...other } = props;
+	const { scene } = useGLTF(url);
+	return <primitive object={scene} {...other} />;
+}
 
 /**
  * 皿の上にサーモンの寿司が乗っている3Dコンポーネント (Group)
+ * modelプロパティが指定されている場合は、そのモデルを表示します。
  * Canvas内で使用されることを前提としています。
  */
 export function Sushi3D(props: Sushi3DProps) {
-	const { toppingColor, ...groupProps } = props;
+	const { toppingColor, model, ...groupProps } = props;
 
 	return (
 		<group {...groupProps}>
+			<React.Suspense fallback={null}>
+				{model ? (
+					<ExternalModel url={model} position={[0, 0.5, 0]} />
+				) : (
+					<>
+
+						{/* シャリ (少し丸みを帯びた直方体) */}
+						<mesh castShadow position={[0, 0.25, 0]}>
+							<boxGeometry args={[0.8, 0.4, 0.5]} />
+							<meshStandardMaterial color="#f8f8f8" roughness={0.8} />
+						</mesh>
+
+						{/* ネタ：サーモン (シャリの上に乗る少し平たい直方体) */}
+						<mesh castShadow position={[0, 0.5, 0]}>
+							<boxGeometry args={[1.0, 0.15, 0.6]} />
+							<meshStandardMaterial
+								color={toppingColor || "#ff8c69"}
+								roughness={0.3}
+								metalness={0.1}
+							/>
+						</mesh>
+					</>
+				)}
+			</React.Suspense>
 			{/* 皿 (シンプルな円柱で代用) */}
 			<mesh receiveShadow position={[0, 0, 0]}>
 				<cylinderGeometry args={[1.5, 1.6, 0.1, 32]} />
 				<meshStandardMaterial color="#ffffff" roughness={0.1} metalness={0.1} />
-			</mesh>
-
-			{/* シャリ (少し丸みを帯びた直方体) */}
-			<mesh castShadow position={[0, 0.25, 0]}>
-				<boxGeometry args={[0.8, 0.4, 0.5]} />
-				<meshStandardMaterial color="#f8f8f8" roughness={0.8} />
-			</mesh>
-
-			{/* ネタ：サーモン (シャリの上に乗る少し平たい直方体) */}
-			<mesh castShadow position={[0, 0.5, 0]}>
-				<boxGeometry args={[1.0, 0.15, 0.6]} />
-				<meshStandardMaterial
-					color={toppingColor || "#ff8c69"}
-					roughness={0.3}
-					metalness={0.1}
-				/>
 			</mesh>
 		</group>
 	);
@@ -61,27 +83,53 @@ export function Sushi3D(props: Sushi3DProps) {
  */
 export function Example() {
 	return (
-		<div className="flex flex-col items-center space-y-4">
-			<h2 className="text-xl font-bold">Sushi3D Example</h2>
-			<div className="w-full h-80 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
-				<Canvas shadows>
-					<PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
-					<OrbitControls enablePan={false} minDistance={2} maxDistance={10} />
-					<ambientLight intensity={0.5} />
-					<pointLight position={[10, 10, 10]} intensity={1.5} castShadow />
-					<Environment preset="city" />
+		<div className="flex flex-col items-center space-y-8">
+			<div className="flex flex-col items-center space-y-4 w-full">
+				<h2 className="text-xl font-bold">Sushi3D (Default)</h2>
+				<div className="w-full h-80 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+					<Canvas shadows>
+						<PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
+						<OrbitControls enablePan={false} minDistance={2} maxDistance={10} />
+						<ambientLight intensity={0.5} />
+						<pointLight position={[10, 10, 10]} intensity={1.5} castShadow />
+						<Environment preset="city" />
 
-					<Sushi3D position={[0, -0.5, 0]} />
+						<Sushi3D position={[0, -0.5, 0]} />
 
-					<ContactShadows
-						opacity={0.4}
-						scale={10}
-						blur={2.4}
-						far={0.8}
-						resolution={256}
-						color="#000000"
-					/>
-				</Canvas>
+						<ContactShadows
+							opacity={0.4}
+							scale={10}
+							blur={2.4}
+							far={0.8}
+							resolution={256}
+							color="#000000"
+						/>
+					</Canvas>
+				</div>
+			</div>
+
+			<div className="flex flex-col items-center space-y-4 w-full">
+				<h2 className="text-xl font-bold">Sushi3D (Custom Model: demo_textured.glb)</h2>
+				<div className="w-full h-80 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+					<Canvas shadows>
+						<PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
+						<OrbitControls enablePan={false} minDistance={2} maxDistance={10} />
+						<ambientLight intensity={0.5} />
+						<pointLight position={[10, 10, 10]} intensity={1.5} castShadow />
+						<Environment preset="city" />
+
+						<Sushi3D position={[0, 0, 0]} model="/demo_textured.glb" scale={2} />
+
+						<ContactShadows
+							opacity={0.4}
+							scale={10}
+							blur={2.4}
+							far={0.8}
+							resolution={256}
+							color="#000000"
+						/>
+					</Canvas>
+				</div>
 			</div>
 			<p className="text-sm text-gray-500">ドラッグで回転、スクロールでズームが可能です。</p>
 		</div>

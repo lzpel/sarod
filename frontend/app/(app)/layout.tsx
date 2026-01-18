@@ -12,7 +12,7 @@
 "use client";
 
 import React, { Suspense } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Box, UserRound } from 'lucide-react';
 import { useUser } from '@/app/Provider';
 import Redirect from '@/stateless_ui/Redirect';
@@ -21,6 +21,7 @@ import { SideLayout } from '@/stateless_ui/SideLayout';
 import { Sushi3D } from '@/stateless_ui/Sushi3D';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { PerspectiveCamera, Environment } from '@react-three/drei';
+import { useQueryState } from 'nuqs';
 
 /**
  * カメラの注視点を原点に固定するための内部コンポーネント
@@ -69,8 +70,8 @@ function SushiNavLink(props: {
 
 export default function Layout(props: { children: React.ReactNode }) {
 	const pathname = usePathname();
-	const searchParams = useSearchParams();
 	const { user, loading } = useUser();
+	const [uuid, setUuid] = useQueryState("uuid", {});
 
 	// ① loading が最優先
 	if (loading) {
@@ -83,8 +84,6 @@ export default function Layout(props: { children: React.ReactNode }) {
 
 	// ② loading が終わってから user 判定
 	if (!user) return <Redirect target="/" />;
-
-	const uuid = searchParams.get('uuid');
 
 	// サイドバーの内容
 	const side = (
