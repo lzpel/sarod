@@ -35,7 +35,7 @@ model Page {
 	path_image: string[];
 	view_image: string[];
 	script: string;
-	progress: int32;// -100-1 進行中 0 完了 1+ エラー
+	progress: int32;// 0 未開始 1-99 進行中 100 完了 101+ エラー
 }
 
 // 課金系
@@ -95,16 +95,16 @@ interface UserApi {
 		ユーザーの名前やプロフィールの設定を行う、認証が必要
 	""")
 	@post user_set(user: User): User | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		大容量ファイルを一次的な領域にアップロードするためのurlを返します
+	""")
+	@route("/upload") @post upload(@query fileName: string, @query expiresIn?: int32): string[] | BadRequestResponse;
 }
 
 // 一個一個の動画を編集する
 @useAuth(BearerAuth)
 @route("/page")
 interface PageApi {
-	@doc("""
-		大容量ファイルを一次的な領域にアップロードするためのurlを返します
-	""")
-	@route("/upload") @post upload(@query fileName: string, @query expiresIn?: int32): string[] | BadRequestResponse;
 	@doc("""
 		動画を追加/更新します、認証が必要
 	""")
@@ -115,6 +115,27 @@ interface PageApi {
 	): Page | ForbiddenResponse | BadRequestResponse;
 	@doc("""
 		ホーム画面用の動画一覧を返します、認証が必要
+	""")
+	@get get(): Page[] | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		動画を削除します、認証が必要
+	""")
+	@route("/{id}")
+	@delete delete(@path id: UUID): NoContentResponse | ForbiddenResponse | BadRequestResponse;
+}
+// 一個一個の動画を編集する
+@route("/task")
+interface TaskApi {
+	@doc("""
+		生成物をアップロードします
+	""")
+	@route("/{id}/{object}")
+	@post push(
+		@path id: string,
+		@path object: string,
+	): Page | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		未処理の生成タスク一覧を返します
 	""")
 	@get get(): Page[] | ForbiddenResponse | BadRequestResponse;
 }

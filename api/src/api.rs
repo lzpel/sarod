@@ -220,14 +220,33 @@ impl out::ApiInterface for Api {
 			Err(e) => out::UserapiUserGetResponse::Status400(e),
 		}
 	}
-	async fn pageapi_upload(&self, req: out::PageapiUploadRequest) -> out::PageapiUploadResponse {
+	async fn userapi_upload(&self, req: out::UserapiUploadRequest) -> out::UserapiUploadResponse {
 		// 指定されたファイル名と有効期限で署名付きURLを生成します
 		// s3のcors設定でallowed originに送信元を入れないとエラーになります
 		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
 		let path = format!("{}_{}", uuid::Uuid::now_v7(), req.fileName);
 		match self.s3_temp.presign_write_url(&path, expires).await {
-			Ok(url) => out::PageapiUploadResponse::Status200([path, url].to_vec()),
-			Err(e) => out::PageapiUploadResponse::Status400(e.to_string()),
+			Ok(url) => out::UserapiUploadResponse::Status200([path, url].to_vec()),
+			Err(e) => out::UserapiUploadResponse::Status400(e.to_string()),
+		}
+	}
+	async fn pageapi_get(&self, req: out::PageapiGetRequest) -> out::PageapiGetResponse {
+		// q.field("progress").lessthan0を指定するならOrderByにprogressを設定するしかないという制約があるので0か否かに限定した。
+		// どちらにせよインデックスの作成が必要
+		match Page::query(
+			&self.db,
+			|q: crate::collection::FilterBuilder| {
+				q.field("id_root")
+					.equal(uuid::Uuid::from_u128(req.security.subject_id).to_string())
+			},
+			Some(OrderBy::Asc("id")),
+			None,
+			Some(100),
+		)
+		.await
+		{
+			Ok(v) => out::PageapiGetResponse::Status200(v),
+			Err(e) => out::PageapiGetResponse::Status400(format!("{:?}", e)),
 		}
 	}
 	async fn pageapi_push(&self, req: out::PageapiPushRequest) -> out::PageapiPushResponse {
@@ -265,6 +284,7 @@ impl out::ApiInterface for Api {
 		}
 		let page = Page {
 			id: uuid,
+			id_root: uuid::Uuid::from_u128(req.security.subject_id),
 			view_image: req.body.view_image.clone(),
 			path_image: path_image_new,
 			progress: 0,
@@ -275,7 +295,29 @@ impl out::ApiInterface for Api {
 			Err(e) => out::PageapiPushResponse::Status400(format!("{:?}", e)),
 		};
 	}
-	async fn pageapi_get(&self, _req: out::PageapiGetRequest) -> out::PageapiGetResponse {
+	async fn pageapi_delete(&self, req: out::PageapiDeleteRequest) -> out::PageapiDeleteResponse {
+		// Firestoreから該当するPageドキュメントを取得
+		let page = match out::Page::get(&self.db, &req.id.to_string()).await {
+			Ok(v) => v,
+			Err(e) => {
+				return out::PageapiDeleteResponse::Status400(format!("page not found: {}", e));
+			}
+		};
+
+		// id_rootとreq.security.subject_idが一致するか確認（所有権の確認）
+		if page.id_root != uuid::Uuid::from_u128(req.security.subject_id) {
+			return out::PageapiDeleteResponse::Status403;
+		}
+
+		// 削除実行
+		match out::Page::pop(&self.db, &req.id.to_string()).await {
+			Ok(_) => out::PageapiDeleteResponse::Status204,
+			Err(e) => {
+				out::PageapiDeleteResponse::Status400(format!("failed to delete page: {}", e))
+			}
+		}
+	}
+	async fn taskapi_get(&self, _req: out::TaskapiGetRequest) -> out::TaskapiGetResponse {
 		// q.field("progress").lessthan0を指定するならOrderByにprogressを設定するしかないという制約があるので0か否かに限定した。
 		// どちらにせよインデックスの作成が必要
 		match Page::query(
@@ -287,8 +329,47 @@ impl out::ApiInterface for Api {
 		)
 		.await
 		{
-			Ok(v) => out::PageapiGetResponse::Status200(v),
-			Err(e) => out::PageapiGetResponse::Status400(format!("{:?}", e)),
+			Ok(v) => out::TaskapiGetResponse::Status200(v),
+			Err(e) => out::TaskapiGetResponse::Status400(format!("{:?}", e)),
+		}
+	}
+	async fn taskapi_push(&self, req: out::TaskapiPushRequest) -> out::TaskapiPushResponse {
+		// リクエストIDをUUIDとしてパース
+		let id = match Uuid::parse_str(&req.id) {
+			Ok(v) => v,
+			Err(e) => return out::TaskapiPushResponse::Status400(format!("invalid id: {}", e)),
+		};
+
+		// Firestoreから該当するPageドキュメントを取得
+		let mut page = match out::Page::get(&self.db, &id.to_string()).await {
+			Ok(v) => v,
+			Err(e) => return out::TaskapiPushResponse::Status400(format!("page not found: {}", e)),
+		};
+
+		// モデルファイルのコピー（s3_temp -> s3_main）
+		// コピー先のパスを決定（例: {page_id}/model.glb）
+		let path_model_new = format!("{}/model.glb", id);
+		match self
+			.s3_main
+			.copy(Some(&self.s3_temp.bucket), &req.object, &path_model_new)
+			.await
+		{
+			Ok(_) => {}
+			Err(e) => {
+				return out::TaskapiPushResponse::Status400(format!("failed to move model: {}", e));
+			}
+		};
+
+		// Pageドキュメントの更新
+		page.path_model = path_model_new;
+		page.progress = 100;
+
+		// 更新内容をFirestoreに保存
+		match page.push(&self.db).await {
+			Ok(_) => out::TaskapiPushResponse::Status200(page),
+			Err(e) => {
+				out::TaskapiPushResponse::Status400(format!("failed to update page: {:?}", e))
+			}
 		}
 	}
 }
