@@ -13,25 +13,17 @@
 
 import React, { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
-import { Box, UserRound } from 'lucide-react';
+import { Box, UserRound, Loader2 } from 'lucide-react';
 import { useUser } from '@/app/Provider';
 import Redirect from '@/stateless_ui/Redirect';
 import Link from 'next/link';
 import { SideLayout } from '@/stateless_ui/SideLayout';
 import { Sushi3D } from '@/stateless_ui/Sushi3D';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { PerspectiveCamera, Environment } from '@react-three/drei';
+import { PerspectiveCamera, Environment, OrbitControls } from '@react-three/drei';
 import { useQueryState } from 'nuqs';
+import { pageApiGet, Page } from '@/src/out';
 
-/**
- * カメラの注視点を原点に固定するための内部コンポーネント
- */
-function CameraTarget() {
-	useFrame((state) => {
-		state.camera.lookAt(0, 0.6, 0); // 寿司の高さに合わせて少し上に
-	});
-	return null;
-}
 
 /**
  * 寿司のリンクを表示する内部コンポーネント
@@ -41,6 +33,8 @@ function SushiNavLink(props: {
 	label: string;
 	toppingColor: string;
 	isActive: boolean;
+	model?: string;
+	progress: number;
 }) {
 	return (
 		<Link
@@ -53,12 +47,24 @@ function SushiNavLink(props: {
 			<div className="absolute inset-0 pointer-events-none">
 				<Canvas shadows>
 					<PerspectiveCamera makeDefault position={[0, 1.8, 3]} fov={40} />
-					<CameraTarget />
 					<ambientLight intensity={0.7} />
 					<Environment preset="city" />
-					<Sushi3D toppingColor={props.toppingColor} scale={1.2} rotation={[0.4, 0.8, 0]} />
+					<Sushi3D toppingColor={props.toppingColor} model={props.model} scale={1.2} />
+					<OrbitControls
+						autoRotate
+						autoRotateSpeed={1.0}
+						enableZoom={false}
+						enablePan={false}
+						enableRotate={false}
+						target={[0, 0.6, 0]}
+					/>
 				</Canvas>
 			</div>
+			{props.progress < 100 && (
+				<div className="absolute inset-0 flex items-center justify-center bg-background-paper/40 backdrop-blur-[1px] z-20">
+					<Loader2 className="w-8 h-8 text-primary-main animate-spin" />
+				</div>
+			)}
 			<div className="relative z-10 flex items-end justify-center h-full p-2">
 				<span className={`text-sm font-bold px-2 py-0.5 rounded-full bg-background-paper/60 backdrop-blur-sm ${props.isActive ? 'text-primary-main' : 'text-text-primary'}`}>
 					{props.label}
@@ -72,6 +78,27 @@ export default function Layout(props: { children: React.ReactNode }) {
 	const pathname = usePathname();
 	const { user, loading } = useUser();
 	const [uuid, setUuid] = useQueryState("uuid", {});
+	const [pages, setPages] = React.useState<Page[]>([]);
+
+	const fetchPages = React.useCallback(() => {
+		if (user) {
+			pageApiGet().then(res => setPages(res.data));
+		}
+	}, [user]);
+
+	// 初回取得
+	React.useEffect(() => {
+		fetchPages();
+	}, [fetchPages]);
+
+	// 条件付きポーリング: progress < 100 のページがある場合のみ10秒ごとに実行
+	React.useEffect(() => {
+		const hasIncomplete = pages.some(p => p.progress < 100);
+		if (hasIncomplete) {
+			const timer = setTimeout(fetchPages, 10000);
+			return () => clearTimeout(timer);
+		}
+	}, [pages, fetchPages]);
 
 	// ① loading が最優先
 	if (loading) {
@@ -114,19 +141,17 @@ export default function Layout(props: { children: React.ReactNode }) {
 
 			{/* 2列目以降: スクロール可能エリア */}
 			<div className="flex-1 overflow-y-auto space-y-3 pr-1">
-				<SushiNavLink
-					href="/sushi?uuid=A"
-					label="寿司A"
-					toppingColor="#ff4500"
-					isActive={pathname === '/sushi' && uuid === 'A'}
-				/>
-
-				<SushiNavLink
-					href="/sushi?uuid=B"
-					label="寿司B"
-					toppingColor="#ff8c69"
-					isActive={pathname === '/sushi' && uuid === 'B'}
-				/>
+				{pages.map((page) => (
+					<SushiNavLink
+						key={page.id}
+						href={`/sushi?uuid=${page.id}`}
+						label={page.name}
+						toppingColor="#ff8c69"
+						model={page.path_model}
+						progress={page.progress}
+						isActive={pathname === '/sushi' && uuid === page.id}
+					/>
+				))}
 
 				{/* デザイン確認用のプレースホルダー */}
 				<div className="h-64 flex items-center justify-center text-text-secondary/20 border-2 border-dashed border-divider rounded-2xl italic">

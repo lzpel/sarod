@@ -224,9 +224,11 @@ impl out::ApiInterface for Api {
 		// 指定されたファイル名と有効期限で署名付きURLを生成します
 		// s3のcors設定でallowed originに送信元を入れないとエラーになります
 		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
-		let path = format!("{}_{}", uuid::Uuid::now_v7(), req.fileName);
-		match self.s3_temp.presign_write_url(&path, expires).await {
-			Ok(url) => out::UserapiUploadResponse::Status200([path, url].to_vec()),
+		//拡張子を維持したまま名前をuuidに
+		let path = std::path::PathBuf::from(uuid::Uuid::now_v7().to_string());
+		let path = std::path::Path::new(&req.fileName).extension().map(|v| path.with_extension(v)).unwrap_or(path);
+		match self.s3_temp.presign_write_url(&path.to_string_lossy(), expires).await {
+			Ok(url) => out::UserapiUploadResponse::Status200([path.to_string_lossy().to_string(), url].to_vec()),
 			Err(e) => out::UserapiUploadResponse::Status400(e.to_string()),
 		}
 	}
@@ -250,10 +252,10 @@ impl out::ApiInterface for Api {
 		}
 	}
 	async fn pageapi_push(&self, req: out::PageapiPushRequest) -> out::PageapiPushResponse {
-		let err = out::PageapiPushResponse::Status400("invalid image".to_string());
+		let err = |msg: &str| out::PageapiPushResponse::Status400(msg.to_string());
 		// view_imageとpath_imageのサイズが等しいこと
 		if req.body.path_image.len() != req.body.view_image.len() {
-			return err;
+			return err("path_image and view_image size is not equal");
 		}
 		for (i, j) in req.body.path_image.iter().zip(req.body.view_image.iter()) {
 			let v = self.s3_temp.head(i).await;
@@ -266,7 +268,7 @@ impl out::ApiInterface for Api {
 					continue;
 				}
 			}
-			return err;
+			return err("more than 10MB or invalid view_image");
 		}
 		let uuid = Uuid::now_v7();
 		let path_image_new: Vec<String> = req
@@ -280,7 +282,7 @@ impl out::ApiInterface for Api {
 			if let Ok(_) = self.s3_main.copy(Some(&self.s3_temp.bucket), i, j).await {
 				continue;
 			}
-			return err;
+			return err(&format!("failed to copy image: {} {} {}", self.s3_temp.bucket, i, j));
 		}
 		let page = Page {
 			id: uuid,
@@ -292,7 +294,7 @@ impl out::ApiInterface for Api {
 		};
 		return match page.push(&self.db).await {
 			Ok(_) => out::PageapiPushResponse::Status200(Default::default()),
-			Err(e) => out::PageapiPushResponse::Status400(format!("{:?}", e)),
+			Err(e) => err(&format!("{:?}", e)),
 		};
 	}
 	async fn pageapi_delete(&self, req: out::PageapiDeleteRequest) -> out::PageapiDeleteResponse {

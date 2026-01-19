@@ -4,8 +4,8 @@
 export function SideLayout(props: { children: React.ReactNode, side: React.ReactNode }) {
 	return (
 		<div className="flex h-screen">
-			<aside className="w-64 bg-gray-400/20 text-white flex-shrink-0 h-full overflow-y-auto">
-				<div className="p-4">
+			<aside className="w-64 bg-gray-400/20 text-white flex-shrink-0 h-full">
+				<div className="p-4 h-full">
 					{props.side}
 				</div>
 			</aside>
