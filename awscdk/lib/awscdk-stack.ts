@@ -5,9 +5,26 @@ import path from 'path';
 export class AwscdkStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
-		// 動画やユーザープロフィール画像の保存用
+		// S3: mainはcloudfrontかapiからアクセスされるのでcorsは必要ない。tempはアップロードurlを提供する場合があるのでcors解放 1日のみ
 		const bucket_main = new cdk.aws_s3.Bucket(this, 'main');
-		const bucket_temp = new cdk.aws_s3.Bucket(this, 'temp');
+		const bucket_temp = new cdk.aws_s3.Bucket(this, 'temp', {
+			cors: [
+				{
+					allowedMethods: [
+						cdk.aws_s3.HttpMethods.GET,
+						cdk.aws_s3.HttpMethods.POST,
+						cdk.aws_s3.HttpMethods.PUT,
+					],
+					allowedOrigins: ['*'],
+					allowedHeaders: ['*'],
+				},
+			],
+			lifecycleRules: [
+				{
+					expiration: cdk.Duration.days(1),
+				},
+			],
+		});
 
 		// ローカルの lambda/Dockerfile からイメージ Lambda を作る
 		const api = docker_image_function(
@@ -21,7 +38,7 @@ export class AwscdkStack extends cdk.Stack {
 				}
 			}
 		)
-		
+
 		//権限設定
 		bucket_main.grantReadWrite(api.lambda)
 		bucket_temp.grantReadWrite(api.lambda)

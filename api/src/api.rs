@@ -239,7 +239,7 @@ impl out::ApiInterface for Api {
 				q.field("id_root")
 					.equal(uuid::Uuid::from_u128(req.security.subject_id).to_string())
 			},
-			Some(OrderBy::Asc("id")),
+			Some(OrderBy::Desc("id")),
 			None,
 			Some(100),
 		)
