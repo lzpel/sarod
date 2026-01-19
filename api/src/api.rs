@@ -282,7 +282,10 @@ impl out::ApiInterface for Api {
 			if let Ok(_) = self.s3_main.copy(Some(&self.s3_temp.bucket), i, j).await {
 				continue;
 			}
-			return err(&format!("failed to copy image: {} {} {}", self.s3_temp.bucket, i, j));
+			return err(&format!(
+				"failed to copy image: {} {} {}",
+				self.s3_temp.bucket, i, j
+			));
 		}
 		let page = Page {
 			id: uuid,
@@ -367,7 +370,7 @@ impl out::ApiInterface for Api {
 		page.progress = 100;
 
 		// 更新内容をFirestoreに保存
-		match page.push(&self.db).await {
+		match page.update(&self.db).await {
 			Ok(_) => out::TaskapiPushResponse::Status200(page),
 			Err(e) => {
 				out::TaskapiPushResponse::Status400(format!("failed to update page: {:?}", e))

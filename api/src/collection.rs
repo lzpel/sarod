@@ -48,6 +48,20 @@ pub trait Collection: for<'a> serde::Deserialize<'a> + serde::Serialize + Sync +
 			.await
 			.map_err(|v| v.to_string())
 	}
+	/// 既存のドキュメントを上書き更新する（存在しない場合はエラー）
+	///
+	/// * `db`: Firestore データベースインスタンス
+	async fn update(&self, db: &firestore::FirestoreDb) -> Result<(), String> {
+		db.fluent()
+			.update()
+			.in_col(Self::collection_name())
+			.precondition(firestore::FirestoreWritePrecondition::Exists(true))
+			.document_id(&self.document_id())
+			.object(self)
+			.execute()
+			.await
+			.map_err(|v| v.to_string())
+	}
 	/// クエリを実行してドキュメントの一覧を取得する
 	///
 	/// * `db`: Firestore データベースインスタンス
