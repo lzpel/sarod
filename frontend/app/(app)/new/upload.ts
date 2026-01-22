@@ -1,4 +1,4 @@
-import { pageApiPush, userApiUpload } from "@/src/out";
+import { authApiS3url, pageApiPush } from "@/src/out";
 
 /**
  * 3D寿司生成のためのアップロードプロセスを管理する関数 (並列処理版)
@@ -37,7 +37,7 @@ export function upload(
 	// 各ファイルに対する並列アップロードPromiseの配列
 	// Promise.all は元の配列の順序を維持します
 	const uploadPromises = files.map((file) => {
-		return userApiUpload({
+		return authApiS3url({
 			fileName: file.name,
 			expiresIn: 3600
 		})

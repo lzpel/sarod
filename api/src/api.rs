@@ -196,6 +196,43 @@ impl out::ApiInterface for Api {
 	async fn authapi_out(&self, _req: out::AuthapiOutRequest) -> out::AuthapiOutResponse {
 		out::AuthapiOutResponse::Raw(Self::jwt_set(None::<out::User>))
 	}
+	async fn authapi_s3get(&self, req: out::AuthapiS3getRequest) -> out::AuthapiS3getResponse {
+		match self.s3_main.read(&req.path_file).await {
+			Ok((meta, data)) => out::AuthapiS3getResponse::Raw(
+				axum::response::Response::builder()
+					.status(axum::http::StatusCode::OK)
+					.header(
+						"content-type",
+						meta.content_type
+							.unwrap_or("application/octet-stream".to_string()),
+					)
+					.body(axum::body::Body::from(data))
+					.unwrap(),
+			),
+			Err(_e) => out::AuthapiS3getResponse::Status404,
+		}
+	}
+	async fn authapi_s3url(&self, req: out::AuthapiS3urlRequest) -> out::AuthapiS3urlResponse {
+		// 指定されたファイル名と有効期限で署名付きURLを生成します
+		// s3のcors設定でallowed originに送信元を入れないとエラーになります
+		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
+		//拡張子を維持したまま名前をuuidに
+		let path = std::path::PathBuf::from(uuid::Uuid::now_v7().to_string());
+		let path = std::path::Path::new(&req.fileName)
+			.extension()
+			.map(|v| path.with_extension(v))
+			.unwrap_or(path);
+		match self
+			.s3_temp
+			.presign_write_url(&path.to_string_lossy(), expires)
+			.await
+		{
+			Ok(url) => out::AuthapiS3urlResponse::Status200(
+				[path.to_string_lossy().to_string(), url].to_vec(),
+			),
+			Err(e) => out::AuthapiS3urlResponse::Status400(e.to_string()),
+		}
+	}
 	async fn userapi_user_pop(
 		&self,
 		req: out::UserapiUserPopRequest,
@@ -218,18 +255,6 @@ impl out::ApiInterface for Api {
 		match out::User::get(&self.db, &v.sub).await {
 			Ok(u) => out::UserapiUserGetResponse::Status200(u),
 			Err(e) => out::UserapiUserGetResponse::Status400(e),
-		}
-	}
-	async fn userapi_upload(&self, req: out::UserapiUploadRequest) -> out::UserapiUploadResponse {
-		// 指定されたファイル名と有効期限で署名付きURLを生成します
-		// s3のcors設定でallowed originに送信元を入れないとエラーになります
-		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
-		//拡張子を維持したまま名前をuuidに
-		let path = std::path::PathBuf::from(uuid::Uuid::now_v7().to_string());
-		let path = std::path::Path::new(&req.fileName).extension().map(|v| path.with_extension(v)).unwrap_or(path);
-		match self.s3_temp.presign_write_url(&path.to_string_lossy(), expires).await {
-			Ok(url) => out::UserapiUploadResponse::Status200([path.to_string_lossy().to_string(), url].to_vec()),
-			Err(e) => out::UserapiUploadResponse::Status400(e.to_string()),
 		}
 	}
 	async fn pageapi_get(&self, req: out::PageapiGetRequest) -> out::PageapiGetResponse {

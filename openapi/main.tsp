@@ -77,7 +77,16 @@ interface AuthApi {
 	@doc("""
 		ログアウト
 	""")
-	@route("/out") @get out(): NoContentResponse
+	@route("/out") @get out(): NoContentResponse;
+	@doc("""
+		メインストレージ用、返値は名目上stringだが、実際にはストリーミングされたバイナリ
+	""")
+	@route("/s/{path_file}") @get s3get(@path path_file: string): string | NotFoundResponse;
+	@doc("""
+		大容量ファイルを一次的な領域にアップロードするためのurlを返します
+	""")
+	@useAuth(BearerAuth)
+	@route("/s") @get s3url(@query fileName: string, @query expiresIn?: int32): string[] | BadRequestResponse;
 }
 
 @useAuth(BearerAuth)
@@ -95,10 +104,6 @@ interface UserApi {
 		ユーザーの名前やプロフィールの設定を行う、認証が必要
 	""")
 	@post user_set(user: User): User | ForbiddenResponse | BadRequestResponse;
-	@doc("""
-		大容量ファイルを一次的な領域にアップロードするためのurlを返します
-	""")
-	@route("/upload") @post upload(@query fileName: string, @query expiresIn?: int32): string[] | BadRequestResponse;
 }
 
 // 一個一個の動画を編集する

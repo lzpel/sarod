@@ -147,7 +147,7 @@ export default function Layout(props: { children: React.ReactNode }) {
 						href={`/sushi?uuid=${page.id}`}
 						label={page.name}
 						toppingColor="#ff8c69"
-						model={page.path_model}
+						model={page.path_model ? `/api/auth/s/${page.path_model}` : undefined}
 						progress={page.progress}
 						isActive={pathname === '/sushi' && uuid === page.id}
 					/>
