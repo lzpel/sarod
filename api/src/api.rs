@@ -487,29 +487,9 @@ impl out::ApiInterface for Api {
 		&self,
 		req: out::UserapiUserPaySessionRequest,
 	) -> out::UserapiUserPaySessionResponse {
-		let session_id = &req.session;
-
-		// セッションの支払い状態を確認
-		let is_paid = match self.stripe.check_payment_complete(session_id).await {
-			Ok(v) => v,
-			Err(e) => {
-				return out::UserapiUserPaySessionResponse::Status400(format!(
-					"failed to check payment: {}",
-					e
-				));
-			}
-		};
-
-		/*
-		if !is_paid {
-			return out::UserapiUserPaySessionResponse::Status400(
-				"payment not completed".to_string(),
-			);
-		}
-		// セッション詳細を取得してサブスクリプションIDを抜く
 		let session = match self
 			.stripe
-			.get_checkout_session(session_id, &["subscription"])
+			.get_checkout_session(&req.session, &["subscription"])
 			.await
 		{
 			Ok(v) => v,
@@ -520,30 +500,31 @@ impl out::ApiInterface for Api {
 				));
 			}
 		};
-
-		let subscription_id = match session.subscription {
-			Some(s) => match s {
-				ngoni::stripe::Expandable::Id(id) => id.to_string(),
-				ngoni::stripe::Expandable::Object(obj) => obj.id.to_string(),
-			},
+		let metadata = match session.metadata {
+			Some(v) => v,
+			None => {
+				return out::UserapiUserPaySessionResponse::Status400(
+					"no metadata found in session".to_string(),
+				);
+			}
+		};
+		let subscription = match session.subscription {
+			Some(v) => v,
 			None => {
 				return out::UserapiUserPaySessionResponse::Status400(
 					"no subscription found in session".to_string(),
 				);
 			}
 		};
-
-		// ユーザーを特定してサブスクリプションIDを保存
-		// client_reference_id にユーザーIDを入れている想定
-		let user_id = match session.client_reference_id {
-			Some(id) => id,
+		let id_root = match metadata.get("id_root") {
+			Some(v) => v.to_string(),
 			None => {
 				return out::UserapiUserPaySessionResponse::Status400(
-					"no user reference in session".to_string(),
+					"no user_id found in metadata".to_string(),
 				);
 			}
 		};
-		let mut user = match out::User::get(&self.db, &user_id).await {
+		let mut user = match out::User::get(&self.db, &id_root).await {
 			Ok(v) => v,
 			Err(e) => {
 				return out::UserapiUserPaySessionResponse::Status400(format!(
@@ -552,18 +533,11 @@ impl out::ApiInterface for Api {
 				));
 			}
 		};
-
-		user.pay_subscription = subscription_id;
-		if let Err(e) = user.update(&self.db).await {
-			return out::UserapiUserPaySessionResponse::Status400(format!(
-				"failed to update user subscription: {}",
-				e
-			));
+		user.pay_subscription = subscription.id().to_string();
+		match user.update(&self.db).await {
+			Ok(_) => Default::default(),
+			Err(e) => out::UserapiUserPaySessionResponse::Status400(e.to_string()),
 		}
-
-		out::UserapiUserPaySessionResponse::Status200(user)
-		*/
-		Default::default()
 	}
 }
 

@@ -18,5 +18,5 @@ rustls = { version = "*", default-features = false, features = ["ring"] }
 uuid = { version = "*", features = ["serde", "v7"] }
 reqwest = { version = "*", default-features = false, features = ["json", "rustls-tls"] }
 jsonwebtoken = "*"
-ngoni = "^0.1.5"
+ngoni = "^0.1.6"
 dotenvy = "*"
