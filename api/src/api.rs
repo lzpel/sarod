@@ -226,9 +226,18 @@ impl out::ApiInterface for Api {
 		let expires = std::time::Duration::from_secs(req.expiresIn.unwrap_or(3600) as u64);
 		//拡張子を維持したまま名前をuuidに
 		let path = std::path::PathBuf::from(uuid::Uuid::now_v7().to_string());
-		let path = std::path::Path::new(&req.fileName).extension().map(|v| path.with_extension(v)).unwrap_or(path);
-		match self.s3_temp.presign_write_url(&path.to_string_lossy(), expires).await {
-			Ok(url) => out::UserapiUploadResponse::Status200([path.to_string_lossy().to_string(), url].to_vec()),
+		let path = std::path::Path::new(&req.fileName)
+			.extension()
+			.map(|v| path.with_extension(v))
+			.unwrap_or(path);
+		match self
+			.s3_temp
+			.presign_write_url(&path.to_string_lossy(), expires)
+			.await
+		{
+			Ok(url) => out::UserapiUploadResponse::Status200(
+				[path.to_string_lossy().to_string(), url].to_vec(),
+			),
 			Err(e) => out::UserapiUploadResponse::Status400(e.to_string()),
 		}
 	}
