@@ -161,7 +161,7 @@ impl out::ApiInterface for Api {
 				let r = out::User {
 					id: Uuid::now_v7(),
 					name: b.name,
-					picture: b.picture.unwrap(),
+					path_profile: b.picture.unwrap(),
 					auth_email: b.email,
 					auth_google: b.sub,
 					is_active: true,
@@ -441,7 +441,7 @@ impl TokenJwtGenerator for out::User {
 			sub: self.id.to_string(),
 			email: self.auth_email.clone(),
 			name: self.name.clone(),
-			picture: Some(self.picture.clone()),
+			picture: Some(self.path_profile.clone()),
 			..Default::default()
 		};
 		println!("{:?}", o);

@@ -19,7 +19,9 @@ scalar UUID extends string;
 model User {
 	id: UUID;//一意
 	name: string;//名前
-	picture: string;//アイコン
+	path_profile: string;//アイコン
+	pay_customer: string;//stripe でのユーザーid
+	pay_subscription: string;//stripe でのサブスクリプションid
 	auth_email: string;
 	auth_google: string;
 	auth_email_password: string;
@@ -36,24 +38,6 @@ model Page {
 	view_image: string[];
 	script: string;
 	progress: int32;// 0 未開始 1-99 進行中 100 完了 101+ エラー
-}
-
-// 課金系
-
-model Plan {
-	id: UUID;               // "free", "pro", "team" など
-	name: string;
-	priceMonthly: int32;      // 円なら税込の金額
-	currency: "JPY" | "USD";
-	description?: string;
-}
-
-
-model Subscription {
-	id: UUID;
-	id_root: UUID;
-	id_node: UUID;
-	status: "active" | "trialing" | "canceled" | "past_due";
 }
 
 @route("/auth")
@@ -85,7 +69,6 @@ interface AuthApi {
 	@doc("""
 		大容量ファイルを一次的な領域にアップロードするためのurlを返します
 	""")
-	@useAuth(BearerAuth)
 	@route("/s") @get s3url(@query fileName: string, @query expiresIn?: int32): string[] | BadRequestResponse;
 }
 
@@ -104,6 +87,17 @@ interface UserApi {
 		ユーザーの名前やプロフィールの設定を行う、認証が必要
 	""")
 	@post user_set(user: User): User | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		ユーザーの課金操作はここに飛ぶ
+		支払いページへのURLを返す
+	""")
+	@route("/plan/{plan}")
+	@post user_pay_plan(@path plan: int32): string | ForbiddenResponse | BadRequestResponse;
+	@doc("""
+		ユーザーの課金結果はここで検証され、ユーザーの課金情報が変更される
+	""")
+	@route("/session")
+	@get user_pay_session(@query session: string): User | ForbiddenResponse | BadRequestResponse;
 }
 
 // 一個一個の動画を編集する
