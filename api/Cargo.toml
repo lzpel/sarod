@@ -19,3 +19,4 @@ uuid = { version = "*", features = ["serde", "v7"] }
 reqwest = { version = "*", default-features = false, features = ["json", "rustls-tls"] }
 jsonwebtoken = "*"
 ngoni = "^0.1.5"
+dotenvy = "*"

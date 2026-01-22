@@ -10,9 +10,11 @@ pub struct Api {
 	db: firestore::FirestoreDb,
 	s3_temp: ngoni::s3::S3Storage,
 	s3_main: ngoni::s3::S3Storage,
+	stripe: ngoni::stripe::Stripe,
 }
 impl Api {
 	pub async fn new() -> Result<Self, String> {
+		dotenvy::from_filename("secret/.env").ok();
 		Ok(Self {
 			google: OAuth::load(
 				"secret/sarod_oauth_google_676186616609-tvidvbklos7q5poilss55ookecj6vr14.apps.googleusercontent.com.json",
@@ -35,6 +37,9 @@ impl Api {
 					.unwrap_or("sarodstack-main7ad10839-yb9blus9myx7".to_string()),
 			)
 			.await,
+			stripe: ngoni::stripe::Stripe::new(
+				std::env::var("STRIPE_SECRET_KEY").unwrap_or_default(),
+			),
 		})
 	}
 	pub fn jwt_get(
@@ -102,7 +107,8 @@ impl out::ApiInterface for Api {
 			.unwrap_or_default();
 		out::User::validate_jwt(token)
 			.map(|v| out::AuthContext {
-				subject: v.sub,
+				subject: v.sub.to_string(),
+				subject_id: uuid::Uuid::parse_str(&v.sub).unwrap().as_u128(),
 				..Default::default()
 			})
 			.map_err(|v| v.to_string())
@@ -401,6 +407,163 @@ impl out::ApiInterface for Api {
 				out::TaskapiPushResponse::Status400(format!("failed to update page: {:?}", e))
 			}
 		}
+	}
+	async fn userapi_user_pay_plan(
+		&self,
+		req: out::UserapiUserPayPlanRequest,
+	) -> out::UserapiUserPayPlanResponse {
+		let Some(_v) = Self::jwt_get(&req) else {
+			return out::UserapiUserPayPlanResponse::Status400("invalid jwt".to_string());
+		};
+		let mut user = match out::User::get(&self.db, &req.security.subject.to_string()).await {
+			Ok(v) => v,
+			Err(e) => {
+				return out::UserapiUserPayPlanResponse::Status400(format!(
+					"user not found: {}",
+					e
+				));
+			}
+		};
+
+		// 顧客IDがない場合は作成する
+		if user.pay_customer.is_empty() {
+			match self
+				.stripe
+				.create_customer(&user.name, &user.auth_email, &user.id.to_string())
+				.await
+			{
+				Ok(w) => {
+					user.pay_customer = w.id.as_str().to_string();
+					if let Err(e) = user.update(&self.db).await {
+						return out::UserapiUserPayPlanResponse::Status400(format!(
+							"failed to update user with customer id: {}",
+							e
+						));
+					}
+				}
+				Err(e) => {
+					return out::UserapiUserPayPlanResponse::Status400(format!(
+						"failed to create stripe customer: {}",
+						e
+					));
+				}
+			}
+		}
+
+		let origin = out::origin_from_request(&req.request).unwrap_or_default();
+		// ngoniを使ってサブスクリプションセッションを作成
+		let session = self
+			.stripe
+			.create_subscription_session(
+				&user.pay_customer,
+				Some(&user.id.to_string()),
+				ngoni::stripe::StripeOrder {
+					name: "sushi3d unlimited plan".to_string(),
+					id: "1".to_string(),
+					currency: ngoni::stripe::Currency::USD,
+					price: 600, // $6.00 (仮)
+					quantity: 1,
+				},
+				ngoni::stripe::Interval::Month,
+				&format!("{origin}/success"),
+				&format!("{origin}/cancel"),
+			)
+			.await;
+
+		match session {
+			Ok(s) => {
+				if let Some(url) = s.url {
+					out::UserapiUserPayPlanResponse::Status200(url)
+				} else {
+					out::UserapiUserPayPlanResponse::Status400(
+						"failed to generate stripe checkout url".to_string(),
+					)
+				}
+			}
+			Err(e) => out::UserapiUserPayPlanResponse::Status400(e.to_string()),
+		}
+	}
+	async fn userapi_user_pay_session(
+		&self,
+		req: out::UserapiUserPaySessionRequest,
+	) -> out::UserapiUserPaySessionResponse {
+		let session_id = &req.session;
+
+		// セッションの支払い状態を確認
+		let is_paid = match self.stripe.check_payment_complete(session_id).await {
+			Ok(v) => v,
+			Err(e) => {
+				return out::UserapiUserPaySessionResponse::Status400(format!(
+					"failed to check payment: {}",
+					e
+				));
+			}
+		};
+
+		/*
+		if !is_paid {
+			return out::UserapiUserPaySessionResponse::Status400(
+				"payment not completed".to_string(),
+			);
+		}
+		// セッション詳細を取得してサブスクリプションIDを抜く
+		let session = match self
+			.stripe
+			.get_checkout_session(session_id, &["subscription"])
+			.await
+		{
+			Ok(v) => v,
+			Err(e) => {
+				return out::UserapiUserPaySessionResponse::Status400(format!(
+					"failed to retrieve checkout session: {}",
+					e
+				));
+			}
+		};
+
+		let subscription_id = match session.subscription {
+			Some(s) => match s {
+				ngoni::stripe::Expandable::Id(id) => id.to_string(),
+				ngoni::stripe::Expandable::Object(obj) => obj.id.to_string(),
+			},
+			None => {
+				return out::UserapiUserPaySessionResponse::Status400(
+					"no subscription found in session".to_string(),
+				);
+			}
+		};
+
+		// ユーザーを特定してサブスクリプションIDを保存
+		// client_reference_id にユーザーIDを入れている想定
+		let user_id = match session.client_reference_id {
+			Some(id) => id,
+			None => {
+				return out::UserapiUserPaySessionResponse::Status400(
+					"no user reference in session".to_string(),
+				);
+			}
+		};
+		let mut user = match out::User::get(&self.db, &user_id).await {
+			Ok(v) => v,
+			Err(e) => {
+				return out::UserapiUserPaySessionResponse::Status400(format!(
+					"user not found: {}",
+					e
+				));
+			}
+		};
+
+		user.pay_subscription = subscription_id;
+		if let Err(e) = user.update(&self.db).await {
+			return out::UserapiUserPaySessionResponse::Status400(format!(
+				"failed to update user subscription: {}",
+				e
+			));
+		}
+
+		out::UserapiUserPaySessionResponse::Status200(user)
+		*/
+		Default::default()
 	}
 }
 
